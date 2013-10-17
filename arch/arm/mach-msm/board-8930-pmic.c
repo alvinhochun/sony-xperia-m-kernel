@@ -294,7 +294,7 @@ static struct pm8xxx_vibrator_platform_data pm8038_vib_pdata = {
 /*MTD-SW-PERIPHERAL-AH-VIBRATOR-00++]*/
 
 static struct pm8xxx_rtc_platform_data pm8xxx_rtc_pdata __devinitdata = {
-	.rtc_write_enable	= false,
+	.rtc_write_enable	= true,
 	.rtc_alarm_powerup	= false,
 };
 
