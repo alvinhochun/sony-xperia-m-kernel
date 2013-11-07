@@ -4,8 +4,8 @@
  * $Id: stk_defines.h,v 1.0 2011/03/05 11:12:08 jsgood Exp $
  *
  * Copyright (C) 2011 Patrick Chang <patrick_chang@sitronix.com.tw>
- * Copyright(C) 2013 Foxconn International Holdings, Ltd. All rights reserved.
- *
+ * Copyright(C) 2011-2012 Foxconn International Holdings, Ltd. All rights reserved.
+
  * This file is subject to the terms and conditions of the GNU General Public
  * License.  See the file COPYING in the main directory of this archive for
  * more details.

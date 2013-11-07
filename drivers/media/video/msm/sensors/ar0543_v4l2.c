@@ -627,6 +627,7 @@ int32_t ar0543_sensor_i2c_probe(struct i2c_client *client,
 	return rc;
 }
 
+/* MM-SL-Improve camera open performance-00*{ */
 /* MM-UW-Improve camera open performance-00+{ */
 /* MM-MC-ImplementOtpReadFunctionForAR0543-00+{ */
 int32_t ar0543_match_id(struct msm_sensor_ctrl_t *s_ctrl)
@@ -634,28 +635,28 @@ int32_t ar0543_match_id(struct msm_sensor_ctrl_t *s_ctrl)
        int32_t rc = 0;
        int32_t productid = 0;
        uint16_t chipid = 0;
-    
-	rc = msm_camera_i2c_read(
-			s_ctrl->sensor_i2c_client,
-			s_ctrl->sensor_id_info->sensor_id_reg_addr, &chipid,
-			MSM_CAMERA_I2C_WORD_DATA);
-	if (rc < 0) {
-		pr_err("%s: %s: read id failed\n", __func__,
-			s_ctrl->sensordata->sensor_name);
-		return rc;
-	}
 
-	CDBG("%s: read id: %x expected id %x:\n", __func__, chipid,
-		s_ctrl->sensor_id_info->sensor_id);
-	if (chipid != s_ctrl->sensor_id_info->sensor_id) {
-		pr_err("ar0543_match_id: chip id does not match\n");
-		return -ENODEV;
-	}
+	if(!g_IsOtpInitDone_ar0543){
+		rc = msm_camera_i2c_read(
+				s_ctrl->sensor_i2c_client,
+				s_ctrl->sensor_id_info->sensor_id_reg_addr, &chipid,
+				MSM_CAMERA_I2C_WORD_DATA);
+		if (rc < 0) {
+			pr_err("%s: %s: read id failed\n", __func__,
+				s_ctrl->sensordata->sensor_name);
+			return rc;
+		}
 
-    if (s_ctrl->sensor_i2c_addr == 0x6C)
-    {
-        if(!g_IsOtpInitDone_ar0543)
-        {
+		CDBG("%s: read id: %x expected id %x:\n", __func__, chipid,
+			s_ctrl->sensor_id_info->sensor_id);
+		if (chipid != s_ctrl->sensor_id_info->sensor_id) {
+			pr_err("ar0543_match_id: chip id does not match\n");
+			return -ENODEV;
+		}
+
+    	if (s_ctrl->sensor_i2c_addr == 0x6C)
+    	{
+
             rc = fih_init_otp_ar0543(s_ctrl);
             if (rc < 0)
                 return rc;
@@ -669,13 +670,14 @@ int32_t ar0543_match_id(struct msm_sensor_ctrl_t *s_ctrl)
                 pr_err("ar0543_match_id: Product id does not match\n");
                 return -ENODEV;
             }
-        }
-    }
+    	}
+	}
     
 	return rc;
 }
 /* MM-MC-ImplementOtpReadFunctionForAR0543-00+} */
 /* MM-UW-Improve camera open performance-00+} */
+/* MM-SL-Improve camera open performance-00*} */
 
 /* MM-UW-Fix MMS can't record 23s-00+{ */
 int32_t ar0543_set_fps(struct msm_sensor_ctrl_t *s_ctrl,
@@ -686,15 +688,17 @@ int32_t ar0543_set_fps(struct msm_sensor_ctrl_t *s_ctrl,
 
 	return rc;
 }
-//MM-MC-ImplementExpsureFunctionForAR0543-00+{
+
+/* MM-UW-fix MMS recording fail-01+{ */  
+/*MM-MC-ImplementExpsureFunctionForAR0543-00+{ */
 static int32_t ar0543_write_prev_exp_gain(struct msm_sensor_ctrl_t *s_ctrl,
-  uint16_t gain, uint32_t line)
+  uint16_t gain, uint32_t line, int32_t luma_avg, uint16_t fgain)/* MM-MC-SyncQct3030-00* */
 {
   uint16_t max_legal_gain = 0xE7F; //32x
   uint16_t min_legal_gain = 0x127; //1.584375x
   int32_t rc = 0;
 
-  //pr_err("%s: line = %d, v_fps = %d\n", __func__, line, v_fps);
+  pr_err("%s: line = %d, v_fps = %d\n", __func__, line, v_fps);
   //line = (line * v_fps)/ Q10; /* MM-UW-fix MMS recording fail-00+{ */  
 
   if (gain < min_legal_gain) {
@@ -714,18 +718,23 @@ static int32_t ar0543_write_prev_exp_gain(struct msm_sensor_ctrl_t *s_ctrl,
     MSM_CAMERA_I2C_WORD_DATA);
   rc = msm_camera_i2c_write(s_ctrl->sensor_i2c_client,0x3012,line,
     MSM_CAMERA_I2C_WORD_DATA);
+  if(v_fps > 2000)
+      rc = msm_camera_i2c_write(s_ctrl->sensor_i2c_client,0x300A,0xA22, MSM_CAMERA_I2C_WORD_DATA); //2594
+  else
+      rc = msm_camera_i2c_write(s_ctrl->sensor_i2c_client,0x300A,0x0457, MSM_CAMERA_I2C_WORD_DATA); 
   s_ctrl->func_tbl->sensor_group_hold_off(s_ctrl);
 
   return rc;
 }
 /*add end*/
 /* MM-UW-Fix MMS can't record 23s-00+} */
+/* MM-UW-fix MMS recording fail-01+} */  
 
 static int32_t ar0543_write_pict_exp_gain(struct msm_sensor_ctrl_t *s_ctrl,
-		uint16_t gain, uint32_t line)
+		uint16_t gain, uint32_t line, int32_t luma_avg, uint16_t fgain)/* MM-MC-SyncQct3030-00* */
 {
   int32_t rc = 0;
-  rc = ar0543_write_prev_exp_gain(s_ctrl,gain,line);
+  rc = ar0543_write_prev_exp_gain(s_ctrl,gain,line, 0, 0);/* MM-MC-SyncQct3030-00* */
   rc = msm_camera_i2c_write(s_ctrl->sensor_i2c_client,0x301A,(0x065C|0x2),
     MSM_CAMERA_I2C_WORD_DATA);
   return rc;

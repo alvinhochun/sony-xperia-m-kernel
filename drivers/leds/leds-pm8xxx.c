@@ -1,5 +1,4 @@
-/* Copyright (c) 2010-2012, The Linux Foundation. All rights reserved.
- * Copyright (c) 2010-2012, Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2010-2012, Code Aurora Forum. All rights reserved.
  * Copyright(C) 2013 Foxconn International Holdings, Ltd. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -859,7 +858,7 @@ static int pm8xxx_led_pwm_configure(struct pm8xxx_led_data *led)
 	return rc;
 }
 
-/* MM-VH-DISPLAY-NICKI20*[ */
+/* MM-VH-DISPLAY-NICKI20.1*[ */
 int fih_wled_set(int level)
 {
 	/* MM-KW-BL_log-00+{ */
@@ -1027,7 +1026,7 @@ fail_id_check:
 	kfree(led);
 	return rc;
 }
-/* MM-VH-DISPLAY-NICKI20*] */
+/* MM-VH-DISPLAY-NICKI20.1*] */
 static int __devexit pm8xxx_led_remove(struct platform_device *pdev)
 {
 	int i;

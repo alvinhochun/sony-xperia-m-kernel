@@ -1,7 +1,6 @@
 /* kernel/power/wakelock.c
  *
  * Copyright (C) 2005-2008 Google, Inc.
- * Copyright (C) 2011-2012, Foxconn International Holdings, Ltd. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -32,7 +31,7 @@ enum {
 	DEBUG_EXPIRE = 1U << 3,
 	DEBUG_WAKE_LOCK = 1U << 4,
 	DEBUG_POLLING_DUMP_WAKELOCK = 1U << 5,	/*KERNEL-SC-SUSPEND_RESUME_WAKELOCK_LOG-01+[ */
-	DEBUG_PMS_WAKE_LOCK = 1U << 6,  //MTD-kernel-BH-PMSWakelockInfo-00+
+	DEBUG_PMS_WAKE_LOCK = 1U << 6,  //CORE-SC-PMSWakelockInfo-00+
 };
 
 /*KERNEL-SC-SUSPEND_RESUME_WAKELOCK_LOG-01+[ */
@@ -55,12 +54,12 @@ module_param_named(debug_mask, debug_mask, int, S_IRUGO | S_IWUSR | S_IWGRP);
 /*KERNEL-SC-SUSPEND_RESUME_WAKELOCK_LOG-01+] */
 static DEFINE_SPINLOCK(list_lock);
 static LIST_HEAD(inactive_locks);
-//MTD-kernel-BH-PMSWakelockInfo-00+[
+//CORE-SC-PMSWakelockInfo-00+[
 #ifdef CONFIG_FIH_DUMP_WAKELOCK
 static DEFINE_SPINLOCK(pms_list_lock);
 static LIST_HEAD(pms_locks);
 #endif
-//MTD-kernel-BH-PMSWakelockInfo-00+]
+//CORE-SC-PMSWakelockInfo-00+]
 static struct list_head active_wake_locks[WAKE_LOCK_TYPE_COUNT];
 static int current_event_num;
 static int suspend_sys_sync_count;
@@ -69,11 +68,6 @@ static struct workqueue_struct *suspend_sys_sync_work_queue;
 static DECLARE_COMPLETION(suspend_sys_sync_comp);
 struct workqueue_struct *suspend_work_queue;
 struct wake_lock main_wake_lock;
-/*FIH-Core-PK-DISABLE_SUSPEND-00+[ */
-#ifdef CONFIG_FIH_DISABLE_SUSPEND
-struct wake_lock avoidsuspend;
-#endif
-/*FIH-Core-PK-DISABLE_SUSPEND-00+] */
 suspend_state_t requested_suspend_state = PM_SUSPEND_MEM;
 static struct wake_lock unknown_wakeup;
 static struct wake_lock suspend_backoff_lock;
@@ -128,7 +122,7 @@ void dump_suspend_info(unsigned long data)
 #endif
 /*FIH-KERNEL-SC-Suspend_Hang_Timer-00+]*/
 
- //MTD-kernel-BH-PMSWakelockInfo-00+[
+ //CORE-SC-PMSWakelockInfo-00+[
  #ifdef CONFIG_FIH_DUMP_WAKELOCK
  void add_pms_wakelock_info(char *pid, char *tag, char * cmdline) 
 {
@@ -231,9 +225,10 @@ exit_add:
 remove_done:	
 	spin_unlock_irqrestore(&pms_list_lock, irqflags);
 }
+ 
+EXPORT_SYMBOL(remove_pms_wakelock_info); //CORE-SC-PMSWakelockInfo-01*
  #endif
-  EXPORT_SYMBOL(remove_pms_wakelock_info);
- //MTD-kernel-BH-PMSWakelockInfo-00+]
+ //CORE-SC-PMSWakelockInfo-00+]
 
 int get_expired_time(struct wake_lock *lock, ktime_t *expire_time)
 {
@@ -382,7 +377,7 @@ static void expire_wake_lock(struct wake_lock *lock)
 		pr_info("expired wake lock %s\n", lock->name);
 }
 
-//MTD-kernel-BH-PMSWakelockInfo-00+[
+//CORE-SC-PMSWakelockInfo-00+[
 #ifdef CONFIG_FIH_DUMP_WAKELOCK
  static void print_active_pms_locks(void)
 {
@@ -406,7 +401,7 @@ static void expire_wake_lock(struct wake_lock *lock)
 	/*CORE-SC-PMSWakelockInfo-01*]*/
 }
 #endif /* CONFIG_FIH_DUMP_WAKELOCK */
-//MTD-kernel-BH-PMSWakelockInfo-00+]
+//CORE-SC-PMSWakelockInfo-00+]
 
 /* Caller must acquire the list_lock spinlock */
 static void print_active_locks(int type)
@@ -440,12 +435,12 @@ static void print_active_locks(int type)
 				print_expired = false;
 		}
 	}
-	//MTD-kernel-BH-PMSWakelockInfo-00+[
+	//CORE-SC-PMSWakelockInfo-00+[
 	#ifdef CONFIG_FIH_DUMP_WAKELOCK
 	if (type == WAKE_LOCK_SUSPEND)
 		print_active_pms_locks();
 	#endif
-	//MTD-kernel-BH-PMSWakelockInfo-00+]
+	//CORE-SC-PMSWakelockInfo-00+]
 }
 
 static long has_wake_lock_locked(int type)
@@ -934,13 +929,6 @@ static int __init wakelocks_init(void)
 	wake_lock_init(&unknown_wakeup, WAKE_LOCK_SUSPEND, "unknown_wakeups");
 	wake_lock_init(&suspend_backoff_lock, WAKE_LOCK_SUSPEND,
 		       "suspend_backoff");
-/*FIH-Core-PK-DISABLE_SUSPEND-00+[ */
-#ifdef CONFIG_FIH_DISABLE_SUSPEND
-	pr_err("avoidsuspend: avoid suspend\n");
-	wake_lock_init(&avoidsuspend, WAKE_LOCK_SUSPEND, "avoidsuspend");
-	wake_lock(&avoidsuspend); 
-#endif
-/*FIH-Core-PK-DISABLE_SUSPEND-00+] */
 
 	ret = platform_device_register(&power_device);
 	if (ret) {
@@ -982,11 +970,6 @@ err_platform_device_register:
 	wake_lock_destroy(&suspend_backoff_lock);
 	wake_lock_destroy(&unknown_wakeup);
 	wake_lock_destroy(&main_wake_lock);
-	/*FIH-Core-PK-DISABLE_SUSPEND-00+[ */
-	#ifdef CONFIG_FIH_DISABLE_SUSPEND
-	wake_lock_destroy(&avoidsuspend);
-	#endif
-	/*FIH-Core-PK-DISABLE_SUSPEND-00+] */
 #ifdef CONFIG_WAKELOCK_STAT
 	wake_lock_destroy(&deleted_wake_locks);
 #endif
@@ -1005,11 +988,6 @@ static void  __exit wakelocks_exit(void)
 	wake_lock_destroy(&suspend_backoff_lock);
 	wake_lock_destroy(&unknown_wakeup);
 	wake_lock_destroy(&main_wake_lock);
-	/*FIH-Core-PK-DISABLE_SUSPEND-00+[ */
-	#ifdef CONFIG_FIH_DISABLE_SUSPEND
-	wake_lock_destroy(&avoidsuspend);
-	#endif
-	/*FIH-Core-PK-DISABLE_SUSPEND-00+] */
 #ifdef CONFIG_WAKELOCK_STAT
 	wake_lock_destroy(&deleted_wake_locks);
 #endif

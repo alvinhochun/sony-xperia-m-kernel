@@ -82,9 +82,9 @@ struct control_class_device*	control_file_node_register( struct control_node_loa
 
 	if( !return_data || !file_node_data )
 	{
-		kfree( return_data );
-		kfree( file_node_data );
+
 		printk( KERN_ERR "DEV_T : Class %s, Device %s, Memory allocat failed\n", load->class_name, load->device_name );
+
 		return	0;
 
 	}

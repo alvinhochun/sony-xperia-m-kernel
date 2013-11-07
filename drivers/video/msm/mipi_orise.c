@@ -1,5 +1,4 @@
 /* Copyright (c) 2012, The Linux Foundation. All rights reserved.
- * Copyright (c) 2010-2011, Code Aurora Forum. All rights reserved.
  * Copyright(C) 2013 Foxconn International Holdings, Ltd. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -24,7 +23,7 @@
 #define AUO_PANEL_ID 0x42
 #define CMI_PANEL_ID 0x43
 #define TRULY_PANEL_ID 0x45
-/* MM-VH-DISPLAY-NICKI20+ */
+/* MM-VH-DISPLAY-NICKI20.1+ */
 #define TRULY_PANEL_V2_ID 0x46
 #define TRULY_PANEL_V3_ID 0x49
 /* MM-KW-CMI_V2-01+{ */
@@ -190,7 +189,7 @@ static char write_display_brightness[2] = {0x51, 0xFF}; /* DTYPE_DCS_WRITE1 */
 #endif
 static char orise_manufacture_idDA[2] = {0xDA, 0x00}; /* DTYPE_DCS_READ */
 
-/* MM-VH-DISPLAY-NICKI20*[ */
+/* MM-VH-DISPLAY-NICKI20.1*[ */
 static char truly_cmd2_enable_offset[2] = {0x00, 0x00}; /* DTYPE_GEN_WRITE1 */
 static char truly_cmd2_enable[4] = {0xFF, 0x80, 0x09, 0x01}; /* DTYPE_GEN_LWRITE */
 static char truly_orise_cmd2_enable_offset[2] = {0x00, 0x80}; /* DTYPE_GEN_WRITE1 */
@@ -591,7 +590,7 @@ static struct dsi_cmd_desc orise_truly_v3_on_cmds[] = {
 	{DTYPE_DCS_WRITE1, 1, 0, 0, 0,	sizeof(write_display_brightness), write_display_brightness}
 #endif
 };
-/* MM-VH-DISPLAY-NICKI20*] */
+/* MM-VH-DISPLAY-NICKI20.1*] */
 static struct dsi_cmd_desc orise_auo_video_on_cmds[] = {
 	{DTYPE_GEN_LWRITE, 1, 0, 0, 0,
 		sizeof(extc), extc},
@@ -709,14 +708,14 @@ static struct dsi_cmd_desc orise_cmi_video_on_cmds[] = {
 	{DTYPE_DCS_WRITE, 1, 0, 0, 20,
 		sizeof(display_on), display_on}
 };
-/* MM-VH-DISPLAY-NICKI20*[ */
+/* MM-VH-DISPLAY-NICKI20.1*[ */
 static struct dsi_cmd_desc orise_video_off_cmds[] = {
 	{DTYPE_DCS_WRITE, 1, 0, 0, 40,
 		sizeof(display_off), display_off},
 	{DTYPE_DCS_WRITE, 1, 0, 0, 120,
 		sizeof(enter_sleep), enter_sleep}
 };
-/* MM-VH-DISPLAY-NICKI20*] */
+/* MM-VH-DISPLAY-NICKI20.1*] */
 
 /* MM-KW-CMI_V2-00+{ */
 /* ----------- [For CMI V2 panel setting Start] ----------- */
@@ -731,6 +730,8 @@ static char shift_addrA6[2] = {0x00, 0xA6}; /* DTYPE_GEN_WRITE1 */
 static char shift_addrB0[2] = {0x00, 0xB0}; /* DTYPE_GEN_WRITE1 */
 static char shift_addrB2[2] = {0x00, 0xB2}; /* DTYPE_GEN_WRITE1 */
 static char x47_set_A_data_latch[2] = {0xC4, 0x00};
+/* MM-VH-DISPLAY-NICKI22+ */
+static char x47_set_A_data_latch_to_0x08[2] = {0xC4, 0x08};
 static char x47_set_B_source_gate[2] = {0xB3, 0x00};
 static char x47_set_C_data_latch[2] = {0xC4, 0x08};
 static char x47_set_D_improve_tear[2] = {0xC0, 0x30};
@@ -825,6 +826,7 @@ static struct dsi_cmd_desc x47_orise_cmi_video_on_cmds[] = {
 		sizeof(display_on), display_on}
 };
 
+/* MM-VH-DISPLAY-NICKI22*[ */
 static struct dsi_cmd_desc x47_orise_cmi_v2_video_on_cmds[] = {
 	{DTYPE_GEN_WRITE1, 1, 0, 0, 0,
 		sizeof(shift_addr00), shift_addr00},
@@ -837,33 +839,13 @@ static struct dsi_cmd_desc x47_orise_cmi_v2_video_on_cmds[] = {
 	{DTYPE_GEN_WRITE1, 1, 0, 0, 0,
 		sizeof(shift_addr92), shift_addr92},
 	{DTYPE_GEN_WRITE1, 1, 0, 0, 0,
-		sizeof(x47_set_A_data_latch), x47_set_A_data_latch},
+		sizeof(x47_set_A_data_latch_to_0x08), x47_set_A_data_latch_to_0x08},
 	{DTYPE_GEN_WRITE1, 1, 0, 0, 0,
 		sizeof(shift_addrA1), shift_addrA1},
 	{DTYPE_GEN_WRITE1, 1, 0, 0, 0,
 		sizeof(x47_set_B_source_gate), x47_set_B_source_gate},
 	{DTYPE_DCS_WRITE, 1, 0, 0, 110,
 		sizeof(exit_sleep), exit_sleep},
-	{DTYPE_GEN_WRITE1, 1, 0, 0, 0,
-		sizeof(shift_addr92), shift_addr92},
-	{DTYPE_GEN_WRITE1, 1, 0, 0, 1,
-		sizeof(x47_set_C_data_latch), x47_set_C_data_latch},
-	{DTYPE_GEN_WRITE1, 1, 0, 0, 0,
-		sizeof(shift_addr92), shift_addr92},
-	{DTYPE_GEN_WRITE1, 1, 0, 0, 1,
-		sizeof(x47_set_A_data_latch), x47_set_A_data_latch},
-	{DTYPE_GEN_WRITE1, 1, 0, 0, 0,
-		sizeof(shift_addr92), shift_addr92},
-	{DTYPE_GEN_WRITE1, 1, 0, 0, 1,
-		sizeof(x47_set_C_data_latch), x47_set_C_data_latch},
-	{DTYPE_GEN_WRITE1, 1, 0, 0, 0,
-		sizeof(shift_addr92), shift_addr92},
-	{DTYPE_GEN_WRITE1, 1, 0, 0, 1,
-		sizeof(x47_set_A_data_latch), x47_set_A_data_latch},
-	{DTYPE_GEN_WRITE1, 1, 0, 0, 0,
-		sizeof(shift_addr92), shift_addr92},
-	{DTYPE_GEN_WRITE1, 1, 0, 0, 1,
-		sizeof(x47_set_C_data_latch), x47_set_C_data_latch},
 	{DTYPE_GEN_WRITE1, 1, 0, 0, 0,
 		sizeof(shift_addrB2), shift_addrB2},
 	{DTYPE_GEN_WRITE1, 1, 0, 0, 0,
@@ -886,10 +868,10 @@ static struct dsi_cmd_desc x47_orise_cmi_v2_video_on_cmds[] = {
 		sizeof(x47_osc_ref_83), x47_osc_ref_83},
 	{DTYPE_GEN_WRITE1, 1, 0, 0, 0,
 		sizeof(shift_addr00), shift_addr00},
-	{DTYPE_DCS_WRITE, 1, 0, 0, 100,
+	{DTYPE_DCS_WRITE, 1, 0, 0, 10,
 		sizeof(display_on), display_on}
 };
-
+/* MM-VH-DISPLAY-NICKI22*] */
 static struct dsi_cmd_desc x47_orise_cmi_video_off_cmds[] = {
 	{DTYPE_DCS_WRITE, 1, 0, 0, 40,
 		sizeof(display_off), display_off},
@@ -944,7 +926,7 @@ static int mipi_orise_lcd_on(struct platform_device *pdev)
 	if (unlikely(gPanelModel == 0)) {
 		gPanelModel = mipi_orise_manufacture_id(mfd);
 	}
-/* MM-VH-DISPLAY-NICKI20*[ */
+/* MM-VH-DISPLAY-NICKI20.1*[ */
 	switch (gPanelModel) {
 		case TRULY_PANEL_V3_ID:
 			rc = mipi_dsi_cmds_tx(&orise_tx_buf, orise_truly_v3_on_cmds,
@@ -978,7 +960,7 @@ static int mipi_orise_lcd_on(struct platform_device *pdev)
 			printk(KERN_ERR "[DISPLAY] illegal PID <0x%02x>\n", gPanelModel);
 			break;
 	}
-/* MM-VH-DISPLAY-NICKI20*] */
+/* MM-VH-DISPLAY-NICKI20.1*] */
     if(gPanelModel)
 	{
 		printk(KERN_ALERT "[DISPLAY] dsi commands done, rc <%d>, PID <0x%02x>\n",

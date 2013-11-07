@@ -476,12 +476,12 @@ ssize_t logger_aio_write(struct kiocb *iocb, const struct iovec *iov,
 
 	now = current_kernel_time();
 
-	//MTD-KERNEL-BH-FixLastAlogForLoggerV2-00*[
+	//MTD-KERNEL-TH-FixLastAlogForLoggerV2-00*[
 	header_v1.pid = header.pid = current->tgid;
 	header_v1.tid = header.tid = current->pid;
 	header_v1.sec = header.sec = now.tv_sec;
 	header_v1.nsec = header.nsec = now.tv_nsec;
-	//MTD-KERNEL-BH-FixLastAlogForLoggerV2-00*]
+	//MTD-KERNEL-TH-FixLastAlogForLoggerV2-00*]
 	header.euid = current_euid();
 	header_v1.len = header.len = min_t(size_t, iocb->ki_left, LOGGER_ENTRY_MAX_PAYLOAD); //MTD-KERNEL-BH-FixLastAlogForLoggerV2-00*
 	header.hdr_size = sizeof(struct logger_entry);

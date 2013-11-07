@@ -16,7 +16,7 @@
 
 #include <linux/types.h>
 
-//MTD-SD1-Power-BH-SuspendLog+[
+//MTD-SD1-Power-BH-SuspendLog-01+[
 #define SUSPEND_LOG_PHY_ADDR 0x881A0000
 #define NPA_RES_FILTER_NUM	6
 #define RPM_MASTER_NUM 6
@@ -27,10 +27,10 @@ typedef enum
 	NOT_MPM_REASON_NONE = 0x0000, //reset MPM reason by leaving MPM
 	NOT_MPM_REASON_PENDING_INT = 0x0001, //not enter MPM because pending interrupt
 	NOT_MPM_REASON_NO_TIME = 0x0002, //not enter MPM because no enough time 
-	//CORE-BH-SuspendLog-05+[
+	//CORE-BH-SuspendLog-07+[
 	NOT_MPM_REASON_ENTER_XO_SHUTDOWN = 0x1000, //has entered XO Shutdown
 	NOT_MPM_REASON_ENTER_VDD_MIN = 0x2000, //has entered Vdd Min
-	//CORE-BH-SuspendLog-05+]
+	//CORE-BH-SuspendLog-07+]
 } pm_not_mpm_reason;
 
 typedef enum
@@ -105,7 +105,7 @@ typedef struct rpm_npa_log
 	  
 typedef struct  suspend_log_def
 {
-	u32 enable_log; //enable RPM Suspend Log
+	u32 enable_log; //enable RPM Suspend Log //CORE-BH-SuspendLog-07*
 	u32 not_mpm_reason; //not enter MPM reason
 	u32 not_mpm_pending_int; //store the not MPM pending interrupt
 
@@ -129,8 +129,13 @@ typedef struct  suspend_log_def
 	u32 mpm_wakeup_pending_int_status2; //Pending MPM wakeup interrupt status2
 
 	u16 vdd_dig_sleep_voltage_mv; //CORE-BH-SuspendLog-07+
+
+	//CORE-BH-SuspendLog-08+[
+	u8 not_mpm_detect; //Trigger ramdump when not mpn too long
+	u32 not_mpm_duration_threshold; //not mpm duration in SCLK for not_mpm_dectect
+	//CORE-BH-SuspendLog-08+]
 }rpm_suspend_log;
-//MTD-SD1-Power-BH-SuspendLog+]
+//MTD-SD1-Power-BH-SuspendLog-01+]
 
 enum {
 	MSM_RPM_LOG_PAGE_INDICES,

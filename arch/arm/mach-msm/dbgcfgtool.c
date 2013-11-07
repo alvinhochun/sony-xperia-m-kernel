@@ -137,7 +137,7 @@ long dbgcfgtool_ioctl(struct file *filp, unsigned int cmd, unsigned long arg){
                     break;
                 default:
                     pr_err("[dbgcfgtool] %s() LINE:%d, Unsupported dbgcfg_id in DBG_IOCTL_CMD_HANDLE_DBGCFG.(ret: %d)\n", __func__, __LINE__, ret);
-                    return -EINVAL;  /* KERNEL-HC-Fix_Coverity-00* */
+                    return -EINVAL;  /* CORE-HC-Fix_Coverity-00* */
             }
 
             if (DbgArg.action == DBGCFG_READ)

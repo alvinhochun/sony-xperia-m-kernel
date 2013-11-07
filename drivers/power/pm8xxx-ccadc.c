@@ -832,12 +832,11 @@ static int pm8xxx_ccadc_resume(struct device *dev)
 				|| delta_temp > CCADC_CALIB_TEMP_THRESH) {
 			the_chip->last_calib_time = current_time_sec;
 			the_chip->last_calib_temp = batt_temp;
-			cancel_delayed_work(&the_chip->calib_ccadc_work);
 			schedule_delayed_work(&the_chip->calib_ccadc_work, 0);
 		} else {
 			schedule_delayed_work(&the_chip->calib_ccadc_work,
-			round_jiffies_relative(msecs_to_jiffies(
-					the_chip->calib_delay_ms)));
+				msecs_to_jiffies(the_chip->calib_delay_ms -
+					(time_since_last_calib * 1000)));
 		}
 	}
 

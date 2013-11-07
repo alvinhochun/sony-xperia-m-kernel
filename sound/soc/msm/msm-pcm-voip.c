@@ -230,8 +230,6 @@ static int msm_voip_dtx_mode_get(struct snd_kcontrol *kcontrol,
 
 	return 0;
 }
-
-/* MM-AY-NIKSS02952-02-[+ */
 static int msm_voip_fens_put(struct snd_kcontrol *kcontrol,
 			struct snd_ctl_elem_value *ucontrol)
 {
@@ -253,7 +251,6 @@ static int msm_voip_fens_get(struct snd_kcontrol *kcontrol,
 				 MODULE_ID_VOICE_MODULE_FENS);
 	return 0;
 }
-/* MM-AY-NIKSS02952-02-]- */
 
 static struct snd_kcontrol_new msm_voip_controls[] = {
 	SOC_SINGLE_EXT("Voip Tx Mute", SND_SOC_NOPM, 0, 1, 0,
@@ -266,7 +263,7 @@ static struct snd_kcontrol_new msm_voip_controls[] = {
 	SOC_SINGLE_EXT("Voip Dtx Mode", SND_SOC_NOPM, 0, 1, 0,
 				msm_voip_dtx_mode_get, msm_voip_dtx_mode_put),
 	SOC_SINGLE_EXT("FENS_VOIP Enable", SND_SOC_NOPM, 0, 1, 0,
-				msm_voip_fens_get, msm_voip_fens_put), /* MM-AY-NIKSS02952-02-- */
+			   msm_voip_fens_get, msm_voip_fens_put),
 };
 
 static int msm_pcm_voip_probe(struct snd_soc_platform *platform)

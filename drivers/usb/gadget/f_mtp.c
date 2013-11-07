@@ -71,6 +71,9 @@
 #define MTP_RESPONSE_OK             0x2001
 #define MTP_RESPONSE_DEVICE_BUSY    0x2019
 
+unsigned int mtp_rx_req_len = MTP_BULK_BUFFER_SIZE;
+module_param(mtp_rx_req_len, uint, S_IRUGO | S_IWUSR);
+
 static const char mtp_shortname[] = "mtp_usb";
 
 struct mtp_dev {
@@ -452,10 +455,17 @@ static int mtp_create_bulk_endpoints(struct mtp_dev *dev,
 		req->complete = mtp_complete_in;
 		mtp_req_put(dev, &dev->tx_idle, req);
 	}
+retry_rx_alloc:
 	for (i = 0; i < RX_REQ_MAX; i++) {
-		req = mtp_request_new(dev->ep_out, MTP_BULK_BUFFER_SIZE);
-		if (!req)
-			goto fail;
+		req = mtp_request_new(dev->ep_out, mtp_rx_req_len);
+		if (!req) {
+			if (mtp_rx_req_len <= MTP_BULK_BUFFER_SIZE)
+				goto fail;
+			for (; i > 0; i--)
+				mtp_request_free(dev->rx_req[i], dev->ep_out);
+			mtp_rx_req_len = MTP_BULK_BUFFER_SIZE;
+			goto retry_rx_alloc;
+		}
 		req->complete = mtp_complete_out;
 		dev->rx_req[i] = req;
 	}
@@ -485,7 +495,7 @@ static ssize_t mtp_read(struct file *fp, char __user *buf,
 
 	DBG(cdev, "mtp_read(%d)\n", count);
 
-	if (count > MTP_BULK_BUFFER_SIZE)
+	if (count > mtp_rx_req_len)
 		return -EINVAL;
 
 	/* we will block until we're online */
@@ -502,7 +512,7 @@ static ssize_t mtp_read(struct file *fp, char __user *buf,
 		dev->state = STATE_READY;
 		spin_unlock_irq(&dev->lock);
 		return -ECANCELED;
-	/*CONN-EH-WHQL-MTP-00+{*/	
+	/*CONN-EH-WHQL-MTP-00+{*/
 	} else if (dev->state == STATE_RESET) {
 		/* report a reset state to userspace */
 		dev->state = STATE_READY;
@@ -540,7 +550,7 @@ requeue_req:
 		goto done;
 	}
 
-	/*CONN-EH-WHQL-MTP-01*{*/
+	/*CONN-EH-WHQL-MTP-00*{*/
 	/*The workaround is to fix CV test "Halt Endpoint Test" and fix WHQL MTP Compliance Test - Core*/
 	//For CV test
 	if (ret < 0) {
@@ -555,8 +565,8 @@ requeue_req:
 		usb_ep_dequeue(dev->ep_out, req);
 		goto done;
 	}
-	/*CONN-EH-WHQL-MTP-01*}*/
-	
+	/*CONN-EH-WHQL-MTP-00*}*/
+
 	if (dev->state == STATE_BUSY) {
 		/* If we got a 0-len packet, throw it back and try again. */
 		if (req->actual == 0)
@@ -808,8 +818,8 @@ static void receive_file_work(struct work_struct *data)
 			read_req = dev->rx_req[cur_buf];
 			cur_buf = (cur_buf + 1) % RX_REQ_MAX;
 
-			read_req->length = (count > MTP_BULK_BUFFER_SIZE
-					? MTP_BULK_BUFFER_SIZE : count);
+			read_req->length = (count > mtp_rx_req_len
+					? mtp_rx_req_len : count);
 			dev->rx_done = 0;
 			ret = usb_ep_queue(dev->ep_out, read_req, GFP_KERNEL);
 			if (ret < 0) {
@@ -1059,6 +1069,7 @@ static int mtp_open(struct inode *ip, struct file *fp)
 static int mtp_release(struct inode *ip, struct file *fp)
 {
 	printk(KERN_INFO "mtp_release\n");
+	dump_stack();//For Monkey test trace call stack
 
 	mtp_unlock(&_mtp_dev->open_excl);
 	return 0;
@@ -1136,7 +1147,7 @@ static int mtp_ctrlrequest(struct usb_composite_dev *cdev,
 
 				list_for_each_entry(f, &cfg->functions, list)	{
 					//CONN-EH-COVERITY63949-00- if (!f)
-					//CONN-EH-COVERITY63949-00-	break;
+					//CONN-EH-COVERITY63949-00- 	break;
 
 					interface_num++;
 					data->bFirstInterfaceNumber = func_num;
@@ -1201,7 +1212,7 @@ static int mtp_ctrlrequest(struct usb_composite_dev *cdev,
 			 * the contents.
 			 */
 			value = w_length;
-		/*CONN-EH-WHQL-MTP-00+}*/	
+		/*CONN-EH-WHQL-MTP-00+}*/
 		} else if (ctrl->bRequest == MTP_REQ_GET_DEVICE_STATUS
 				&& w_index == 0 && w_value == 0) {
 			struct mtp_device_status *status = cdev->req->buf;
@@ -1261,6 +1272,7 @@ mtp_function_bind(struct usb_configuration *c, struct usb_function *f)
 	if (id < 0)
 		return id;
 	mtp_interface_desc.bInterfaceNumber = id;
+	//CONN-EH-MTP-00- mtp_ext_config_desc.function.bFirstInterfaceNumber = id;
 
 	/* allocate endpoints */
 	ret = mtp_create_bulk_endpoints(dev, &mtp_fullspeed_in_desc,

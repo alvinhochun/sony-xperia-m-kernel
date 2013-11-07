@@ -169,14 +169,6 @@ enum {
 	PCOM_CMD_FAIL_PROC_COMM_NOT_INIT,
 };
 
-/* FIH-SW3-KERNEL-TH-porting_dbgcfgtool-00+[ */
-#define NV_FIHDBG_I    8045
-#define NV_ERR_FATAL_OPTIONS_I    905
-#define FIH_DEBUG_CMD_DATA_SIZE  5
-#define FIH_DEBUG_CFG_LEN  4 * sizeof(unsigned int)
-
-int msm_proc_comm_oem_multi(unsigned cmd, unsigned *data1, unsigned *data2, unsigned *cmd_parameter, int number);
-/* FIH-SW3-KERNEL-TH-porting_dbgcfgtool-00+] */
 #ifdef CONFIG_MSM_PROC_COMM
 void msm_proc_comm_reset_modem_now(void);
 int msm_proc_comm(unsigned cmd, unsigned *data1, unsigned *data2);

@@ -1,5 +1,5 @@
 /* Copyright (c) 2010-2013, The Linux Foundation. All rights reserved.
- * Copyright (c) 2013 Foxconn International Holdings, Ltd. All rights reserved.
+ * Copyright (C) 2013 Foxconn International Holdings, Ltd. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -39,11 +39,8 @@ struct afe_ctl {
 static struct afe_ctl this_afe;
 
 static struct acdb_cal_block afe_cal_addr[MAX_AUDPROC_TYPES];
-
-/* MM-AY-NIK01485-00-[+ */
 static int pcm_afe_instance[2];
 static int proxy_afe_instance[2];
-/* MM-AY-NIK01485-00-]- */
 bool afe_close_done[2] = {true, true};
 
 #define TIMEOUT_MS 1000
@@ -452,7 +449,7 @@ int afe_port_start(u16 port_id, union afe_port_config *afe_config,
 		return ret;
 	}
 	pr_debug("%s: %d %d\n", __func__, port_id, rate);
-/* MM-AY-NIK01485-00-[+ */
+
 	if ((port_id == RT_PROXY_DAI_001_RX) ||
 		(port_id == RT_PROXY_DAI_002_TX)) {
 		pr_debug("%s: before incrementing pcm_afe_instance %d"\
@@ -477,7 +474,6 @@ int afe_port_start(u16 port_id, union afe_port_config *afe_config,
 		afe_close_done[port_id & 0x1] = false;
 		port_id = VIRTUAL_ID_TO_PORTID(port_id);
 	}
-/* MM-AY-NIK01485-00-]- */
 
 	ret = afe_q6_interface_prepare();
 	if (IS_ERR_VALUE(ret))
@@ -1600,7 +1596,7 @@ static ssize_t afe_debug_write(struct file *filp,
 				goto afe_error;
 			}
 
-			if (param[1] > 100) { /* MM-AY-NIK02579-00-- */
+			if (param[1] > 100) {
 				pr_err("%s: Error, volume shoud be 0 to 100"
 					" percentage param = %lu\n",
 					__func__, param[1]);
@@ -1726,8 +1722,7 @@ int afe_close(int port_id)
 		goto fail_cmd;
 	}
 	pr_debug("%s: port_id=%d\n", __func__, port_id);
-	
-/* MM-AY-NIK01485-00-[+ */
+
 	if ((port_id == RT_PROXY_DAI_001_RX) ||
 		(port_id == RT_PROXY_DAI_002_TX)) {
 		pr_debug("%s: before decrementing pcm_afe_instance %d\n",
@@ -1753,7 +1748,6 @@ int afe_close(int port_id)
 		else
 			afe_close_done[port_id & 0x1] = true;
 	}
-/* MM-AY-NIK01485-00-]- */
 
 	port_id = afe_convert_virtual_to_portid(port_id);
 
@@ -1801,11 +1795,11 @@ static int __init afe_init(void)
 	this_afe.apr = NULL;
 #ifdef CONFIG_DEBUG_FS
 	debugfs_afelb = debugfs_create_file("afe_loopback",
-	S_IFREG | S_IWUSR, NULL, (void *) "afe_loopback",  /* MM-NC-FILE_PERMISSION-00 */
+	0200, NULL, (void *) "afe_loopback",  /* MM-NC-FilePermission-00 */
 	&afe_debug_fops);
 
 	debugfs_afelb_gain = debugfs_create_file("afe_loopback_gain",
-	S_IFREG | S_IWUSR, NULL, (void *) "afe_loopback_gain",  /* MM-NC-FILE_PERMISSION-00 */
+	0200, NULL, (void *) "afe_loopback_gain",  /* MM-NC-FilePermission-00 */
 	&afe_debug_fops);
 
 

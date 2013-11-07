@@ -19,11 +19,10 @@
 #define VERSION_HOST_H
 
 // HOST version format: v<bsp version>.<platform number>.<branch number>.<build number>
-#define VER_HOST_BSP_VERSION     "172136"          //(5 digits, Dec.).
-#define VER_HOST_PLATFORM_NUMBER "41"            //(2 digits, Dec.). i.e. 2.0/2.1(Eclair);2.2(Froyo) ...
-#define VER_HOST_BRANCH_NUMBER   "21"            //(2 digits, Dec.)
+#define VER_HOST_BSP_VERSION     "3034"          //(4 digits, Dec.).
+#define VER_HOST_PLATFORM_NUMBER "42"            //(2 digits, Dec.). i.e. 2.0/2.1(Eclair);2.2(Froyo) ...
+#define VER_HOST_BRANCH_NUMBER   "29"            //(2 digits, Dec.)
 #define VER_HOST_BUILD_NUMBER    "<build_no>"    //(6 digits, Dec.)
 #define VER_HOST_GIT_COMMIT      "<git_commit>"  //(40 digits, Hex.)
-
 
 #endif //#ifndef VERSION_HOST_H

@@ -49,9 +49,6 @@
 #define REG_PM8921_PON_CNTRL_3	0x01D
 #define PM8921_RESTART_REASON_MASK	0x07
 
-static struct platform_device *the_chip = NULL;
-
-
 #define SINGLE_IRQ_RESOURCE(_name, _irq) \
 { \
 	.name	= _name, \
@@ -865,8 +862,6 @@ static int __devinit pm8921_probe(struct platform_device *pdev)
 		pr_err("missing platform data\n");
 		return -EINVAL;
 	}
-
-	the_chip = pdev;
 
 	pmic = kzalloc(sizeof(struct pm8921), GFP_KERNEL);
 	if (!pmic) {

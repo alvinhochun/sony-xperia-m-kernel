@@ -130,7 +130,7 @@ static void early_suspend(struct work_struct *work)
 	if (debug_mask & DEBUG_SUSPEND)
 		pr_info("early_suspend: call handlers\n");
 	list_for_each_entry(pos, &early_suspend_handlers, link) {
-/*CORE-SC-SUSPEND_RESUME_WAKELOCK_LOG-02+[ */
+/*KERNEL-SC-SUSPEND_RESUME_WAKELOCK_LOG-01+[ */
 #ifdef CONFIG_FIH_SUSPEND_RESUME_LOG
 		if (pos->suspend != NULL) {
 				calltime = ktime_get();
@@ -149,6 +149,7 @@ static void early_suspend(struct work_struct *work)
 			pos->suspend(pos);
 		}
 #endif
+/*KERNEL-SC-SUSPEND_RESUME_WAKELOCK_LOG-01+] */
 	}
 	mutex_unlock(&early_suspend_lock);
 	
@@ -222,7 +223,7 @@ static void late_resume(struct work_struct *work)
 	if (debug_mask & DEBUG_SUSPEND)
 		pr_info("late_resume: call handlers\n");
 	list_for_each_entry_reverse(pos, &early_suspend_handlers, link) {
-/*CORE-SC-SUSPEND_RESUME_WAKELOCK_LOG-02+[ */
+/*KERNEL-SC-SUSPEND_RESUME_WAKELOCK_LOG-01+[ */
 #ifdef CONFIG_FIH_SUSPEND_RESUME_LOG
 		if (pos->resume != NULL) {
 			calltime = ktime_get();
@@ -243,7 +244,7 @@ static void late_resume(struct work_struct *work)
 			pos->resume(pos);
 		}
 #endif
-/*CORE-SC-SUSPEND_RESUME_WAKELOCK_LOG-02+] */	
+/*KERNEL-SC-SUSPEND_RESUME_WAKELOCK_LOG-01+] */	
 	}
 	/*CORE-SC-suspend-resume-debug-msg-00*[*/
 	#ifdef CONFIG_FIH_SUSPEND_RESUME_LOG

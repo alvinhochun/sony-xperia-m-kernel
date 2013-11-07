@@ -308,7 +308,20 @@ static struct platform_driver pmic8xxx_pwrkey_driver = {
 		.pm	= &pm8xxx_pwr_key_pm_ops,
 	},
 };
-module_platform_driver(pmic8xxx_pwrkey_driver);
+
+static int __devinit pmic8xxx_pwrkey_init(void)
+{
+	return platform_driver_register(&pmic8xxx_pwrkey_driver);
+}
+
+/*PERI-AH-POWERKEY_Change_init_API-00+[ */
+/* Because touch driver need init first then power key so change to use module_init */
+#if 0
+subsys_initcall(pmic8xxx_pwrkey_init);
+#else
+module_init(pmic8xxx_pwrkey_init);
+#endif
+/*PERI-AH-POWERKEY_Change_init_API-00+] */
 
 MODULE_ALIAS("platform:pmic8xxx_pwrkey");
 MODULE_DESCRIPTION("PMIC8XXX Power Key driver");

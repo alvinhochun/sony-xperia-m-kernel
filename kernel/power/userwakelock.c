@@ -39,7 +39,7 @@ struct user_wake_lock {
 };
 struct rb_root user_wake_locks;
 
-//MTD-kernel-BH-PMSWakelockInfo-00+[
+//CORE-SC-PMSWakelockInfo-00+[
 #ifdef CONFIG_FIH_DUMP_WAKELOCK
 static void getPMSWakeLockInfo(char* name, char **pid, char **tag, char **cmdline)
 {
@@ -67,7 +67,7 @@ static void getPMSWakeLockInfo(char* name, char **pid, char **tag, char **cmdlin
 	if (*name) *name='\0';
 }
 #endif
-//MTD-kernel-BH-PMSWakelockInfo-00*]
+//CORE-SC-PMSWakelockInfo-00*]
 
 static struct user_wake_lock *lookup_wake_lock_name(
 	const char *buf, int allocate, long *timeoutptr)
@@ -183,7 +183,7 @@ ssize_t wake_lock_store(
 {
 	long timeout;
 	struct user_wake_lock *l;
-//MTD-kernel-BH-PMSWakelockInfo-00+[
+//CORE-SC-PMSWakelockInfo-00+[
 	#ifdef CONFIG_FIH_DUMP_WAKELOCK
 	char *pid = NULL;
 	char *cmdline = NULL;
@@ -198,7 +198,7 @@ ssize_t wake_lock_store(
 		#endif		
 		return n;
 	}
-//MTD-kernel-BH-PMSWakelockInfo-00+]
+//CORE-SC-PMSWakelockInfo-00+]
 
 	mutex_lock(&tree_lock);
 	l = lookup_wake_lock_name(buf, 1, &timeout);
@@ -246,7 +246,7 @@ ssize_t wake_unlock_store(
 	const char *buf, size_t n)
 {
 	struct user_wake_lock *l;
-//MTD-kernel-BH-PMSWakelockInfo-00+[
+//CORE-SC-PMSWakelockInfo-00+[
 	#ifdef CONFIG_FIH_DUMP_WAKELOCK
 	char *pid = NULL;
 	char *cmdline = NULL;
@@ -261,7 +261,7 @@ ssize_t wake_unlock_store(
 		#endif
 		return n;
 	}
-//MTD-kernel-BH-PMSWakelockInfo-00+]
+//CORE-SC-PMSWakelockInfo-00+]
 
 	mutex_lock(&tree_lock);
 	l = lookup_wake_lock_name(buf, 0, NULL);

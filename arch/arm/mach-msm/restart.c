@@ -48,10 +48,11 @@
 
 #define SCM_IO_DISABLE_PMIC_ARBITER	1
 
-#ifdef CONFIG_MSM_RESTART_V2
-#define use_restart_v2()	1
-#else
-#define use_restart_v2()	0
+#ifdef CONFIG_LGE_CRASH_HANDLER
+#define LGE_ERROR_HANDLER_MAGIC_NUM	0xA97F2C46
+#define LGE_ERROR_HANDLER_MAGIC_ADDR	0x18
+void *lge_error_handler_cookie_addr;
+static int ssr_magic_number = 0;
 #endif
 
 //CORE-DL-FOTA-00 +[
@@ -59,8 +60,19 @@
 #define CONFIG_WARMBOOT_S1   0x6F656D53
 //CORE-DL-FOTA-00 +]
 
-extern unsigned int debug_ramdump_to_sdcard_enable;/*CORE-HC-RAMDUMP-00+*/
+//CORE-DL-ADD_SWITCH_FOR_RPM_BACKUP-00 +[
+#ifdef SECURE_RPM_RAM
+#define RPM_MSG_RAM_SRC_PHYS_ADDR 0x00108000
+#define RPM_CODE_RAM_SRC_PHYS_ADDR 0x20000
 
+static void *RPM_MSG_RAM_VIRT_ADDR = 0;
+static void *RPM_MSG_RAM_SRC_VIRT_ADDR = 0;
+static void *RPM_CODE_RAM_VIRT_ADDR = 0;
+static void *RPM_CODE_RAM_SRC_VIRT_ADDR = 0;
+#endif
+//CORE-DL-ADD_SWITCH_FOR_RPM_BACKUP-00 +[
+
+extern unsigned int debug_ramdump_to_sdcard_enable;/*CORE-HC-RAMDUMP-00+*/
 
 static int restart_mode;
 void *restart_reason;
@@ -95,6 +107,10 @@ static void set_dload_mode(int on)
 		__raw_writel(on ? 0xE47B337D : 0, dload_mode_addr);
 		__raw_writel(on ? 0xCE14091A : 0,
 		       dload_mode_addr + sizeof(unsigned int));
+#ifdef CONFIG_LGE_CRASH_HANDLER
+		__raw_writel(on ? LGE_ERROR_HANDLER_MAGIC_NUM : 0,
+				lge_error_handler_cookie_addr);
+#endif
 		mb();
 	}
 }
@@ -116,6 +132,9 @@ static int dload_set(const char *val, struct kernel_param *kp)
 	}
 
 	set_dload_mode(download_mode);
+#ifdef CONFIG_LGE_CRASH_HANDLER
+	ssr_magic_number = 0;
+#endif
 
 	return 0;
 }
@@ -126,6 +145,10 @@ static int dload_set(const char *val, struct kernel_param *kp)
 void msm_set_restart_mode(int mode)
 {
 	restart_mode = mode;
+#ifdef CONFIG_LGE_CRASH_HANDLER
+	if (download_mode == 1 && (mode & 0xFFFF0000) == 0x6D630000)
+		panic("LGE crash handler detected panic");
+#endif
 }
 EXPORT_SYMBOL(msm_set_restart_mode);
 
@@ -138,11 +161,7 @@ static void __msm_power_off(int lower_pshold)
 	pm8xxx_reset_pwr_off(0);
 
 	if (lower_pshold) {
-		if (!use_restart_v2())
-			__raw_writel(0, PSHOLD_CTL_SU);
-		else
-			__raw_writel(0, MSM_MPM2_PSHOLD_BASE);
-
+		__raw_writel(0, PSHOLD_CTL_SU);
 		mdelay(10000);
 		printk(KERN_ERR "Powering off has failed\n");
 	}
@@ -196,9 +215,46 @@ static irqreturn_t resout_irq_handler(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
+#ifdef CONFIG_LGE_CRASH_HANDLER
+#define SUBSYS_NAME_MAX_LENGTH	40
+
+int get_ssr_magic_number(void)
+{
+	return ssr_magic_number;
+}
+
+void set_ssr_magic_number(const char* subsys_name)
+{
+	int i;
+	const char *subsys_list[] = {
+		"modem", "riva", "dsps", "lpass",
+		"external_modem", "gss",
+	};
+
+	ssr_magic_number = (0x6d630000 | 0x0000f000);
+
+	for (i=0; i < ARRAY_SIZE(subsys_list); i++) {
+		if (!strncmp(subsys_list[i], subsys_name,
+					SUBSYS_NAME_MAX_LENGTH)) {
+			ssr_magic_number = (0x6d630000 | ((i+1)<<12));
+			break;
+		}
+	}
+}
+
+void set_kernel_crash_magic_number(void)
+{
+	pet_watchdog();
+	if (ssr_magic_number == 0)
+		__raw_writel(0x6d630100, restart_reason);
+	else
+		__raw_writel(restart_mode, restart_reason);
+}
+#endif /* CONFIG_LGE_CRASH_HANDLER */
+
 void * get_hw_wd_virt_addr(void);
 
-static void msm_restart_prepare(const char *cmd)
+void msm_restart(char mode, const char *cmd)
 {
 unsigned int *fih_hw_wd_ptr;
 
@@ -211,13 +267,20 @@ unsigned int *fih_hw_wd_ptr;
 	set_dload_mode(in_panic);
 
 	/* Write download mode flags if restart_mode says so */
-	if (restart_mode == RESTART_DLOAD)
+	if (restart_mode == RESTART_DLOAD) {
 		set_dload_mode(1);
+#ifdef CONFIG_LGE_CRASH_HANDLER
+		writel(0x6d63c421, restart_reason);
+		goto reset;
+#endif
+	}
 
 	/* Kill download mode if master-kill switch is set */
 	if (!download_mode)
 		set_dload_mode(0);
 #endif
+
+	printk(KERN_NOTICE "Going down for restart now\n");
 
 	pm8xxx_reset_pwr_off(1);
 
@@ -247,38 +310,44 @@ unsigned int *fih_hw_wd_ptr;
 	if ((in_panic == 1) && (debug_ramdump_to_sdcard_enable == 1)) {
 		//Write restart_reason as REBOOT_CRASHDUMP_PANIC
 		__raw_writel(0xC0DEDEAD, restart_reason);
+
+//CORE-DL-ADD_SWITCH_FOR_RPM_BACKUP-00 +[
+#ifdef SECURE_RPM_RAM
+		if (RPM_MSG_RAM_VIRT_ADDR != NULL && RPM_MSG_RAM_SRC_VIRT_ADDR != NULL) {
+			memcpy(RPM_MSG_RAM_VIRT_ADDR, RPM_MSG_RAM_SRC_VIRT_ADDR , RPM_MSG_RAM_SIZE);
+		}
+
+		if (RPM_CODE_RAM_VIRT_ADDR != NULL && RPM_CODE_RAM_SRC_VIRT_ADDR != NULL) {
+			memcpy(RPM_CODE_RAM_VIRT_ADDR, RPM_CODE_RAM_SRC_VIRT_ADDR , RPM_CODE_RAM_SIZE);
+		}
+#endif
+//CORE-DL-ADD_SWITCH_FOR_RPM_BACKUP-00 +]
 	}
 
 	fih_hw_wd_ptr = (unsigned int*) get_hw_wd_virt_addr();
 	if (fih_hw_wd_ptr != NULL)
 		*fih_hw_wd_ptr = MTD_PWR_ON_EVENT_CLEAN_DATA;
 //CORE-DL-FIX_ADB_REBOOT-00 +]
-}
-//MTD-KERNEL-DL-PWRON_CAUSE-00 +]
 
-void msm_restart(char mode, const char *cmd)
-{
-	printk(KERN_NOTICE "Going down for restart now\n");
+	
+#ifdef CONFIG_LGE_CRASH_HANDLER
+	if (in_panic == 1)
+		set_kernel_crash_magic_number();
+reset:
+#endif /* CONFIG_LGE_CRASH_HANDLER */
 
-	msm_restart_prepare(cmd);
+	__raw_writel(0, msm_tmr0_base + WDT0_EN);
+	if (!(machine_is_msm8x60_fusion() || machine_is_msm8x60_fusn_ffa())) {
+		mb();
+		__raw_writel(0, PSHOLD_CTL_SU); /* Actually reset the chip */
+		mdelay(5000);
+		pr_notice("PS_HOLD didn't work, falling back to watchdog\n");
+	}
 
-	if (!use_restart_v2()) {
-		__raw_writel(0, msm_tmr0_base + WDT0_EN);
-		if (!(machine_is_msm8x60_fusion() ||
-		      machine_is_msm8x60_fusn_ffa())) {
-			mb();
-			 /* Actually reset the chip */
-			__raw_writel(0, PSHOLD_CTL_SU);
-			mdelay(5000);
-			pr_notice("PS_HOLD didn't work, falling back to watchdog\n");
-		}
-
-		__raw_writel(1, msm_tmr0_base + WDT0_RST);
-		__raw_writel(5*0x31F3, msm_tmr0_base + WDT0_BARK_TIME);
-		__raw_writel(0x31F3, msm_tmr0_base + WDT0_BITE_TIME);
-		__raw_writel(1, msm_tmr0_base + WDT0_EN);
-	} else
-		__raw_writel(0, MSM_MPM2_PSHOLD_BASE);
+	__raw_writel(1, msm_tmr0_base + WDT0_RST);
+	__raw_writel(5*0x31F3, msm_tmr0_base + WDT0_BARK_TIME);
+	__raw_writel(0x31F3, msm_tmr0_base + WDT0_BITE_TIME);
+	__raw_writel(1, msm_tmr0_base + WDT0_EN);
 
 	mdelay(10000);
 	printk(KERN_ERR "Restarting has failed\n");
@@ -298,6 +367,46 @@ static int __init msm_pmic_restart_init(void)
 		pr_warn("no pmic restart interrupt specified\n");
 	}
 
+#ifdef CONFIG_LGE_CRASH_HANDLER
+	__raw_writel(0x6d63ad00, restart_reason);
+#endif
+
+//CORE-DL-ADD_SWITCH_FOR_RPM_BACKUP-00 +[
+#ifdef SECURE_RPM_RAM
+	if (unlikely(RPM_MSG_RAM_VIRT_ADDR == 0)){
+		RPM_MSG_RAM_VIRT_ADDR = ioremap(RPM_MSG_RAM_PHYS_ADDR, RPM_MSG_RAM_SIZE);
+		if (RPM_MSG_RAM_VIRT_ADDR == NULL) {
+			pr_err("%s: RPM_MSG_RAM_VIRT_ADDR is Null!\n",
+					__func__);
+		}
+	}
+
+	if (unlikely(RPM_MSG_RAM_SRC_VIRT_ADDR == 0)){
+		RPM_MSG_RAM_SRC_VIRT_ADDR = ioremap(RPM_MSG_RAM_SRC_PHYS_ADDR, RPM_MSG_RAM_SIZE);
+		if (RPM_MSG_RAM_SRC_VIRT_ADDR == NULL) {
+			pr_err("%s: RPM_MSG_RAM_SRC_VIRT_ADDR is Null!\n",
+					__func__);
+		}
+	}
+
+	if (unlikely(RPM_CODE_RAM_VIRT_ADDR == 0)){
+		RPM_CODE_RAM_VIRT_ADDR = ioremap(RPM_CODE_RAM_PHYS_ADDR, RPM_CODE_RAM_SIZE);
+		if (RPM_CODE_RAM_VIRT_ADDR == NULL) {
+			pr_err("%s: RPM_CODE_RAM_VIRT_ADDR is Null!\n",
+					__func__);
+		}
+	}
+
+	if (unlikely(RPM_CODE_RAM_SRC_VIRT_ADDR == 0)){
+		RPM_CODE_RAM_SRC_VIRT_ADDR = ioremap(RPM_CODE_RAM_SRC_PHYS_ADDR, RPM_CODE_RAM_SIZE);
+		if (RPM_CODE_RAM_SRC_VIRT_ADDR == NULL) {
+			pr_err("%s: RPM_CODE_RAM_SRC_VIRT_ADDR is Null!\n",
+					__func__);
+		}
+	}
+#endif
+//CORE-DL-ADD_SWITCH_FOR_RPM_BACKUP-00 +]
+
 	return 0;
 }
 
@@ -308,6 +417,10 @@ static int __init msm_restart_init(void)
 #ifdef CONFIG_MSM_DLOAD_MODE
 	atomic_notifier_chain_register(&panic_notifier_list, &panic_blk);
 	dload_mode_addr = MSM_IMEM_BASE + DLOAD_MODE_ADDR;
+#ifdef CONFIG_LGE_CRASH_HANDLER
+	lge_error_handler_cookie_addr = MSM_IMEM_BASE +
+		LGE_ERROR_HANDLER_MAGIC_ADDR;
+#endif
 	set_dload_mode(download_mode);
 #endif
 	msm_tmr0_base = msm_timer_get_timer0_base();

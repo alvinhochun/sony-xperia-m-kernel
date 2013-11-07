@@ -29,20 +29,20 @@ if FIH_CONFIG_GROUP
             help
                 Enable/Disable the build flag FIH_FTM.
 
-        config FIH_SEMC_S1
-            bool "FIH_SEMC_S1"
-            depends on FIH_PROJECT_S3A
-            default n
-            help
-                Enable/Disable SEMC S1 boot for S3A.
-
         config FIH_MACH_S3A
             bool "FIH_MACH_S3A"
             depends on FIH_PROJECT_S3A
             default y
             help
                 Enable/Disable the build flag FIH_MACH_S3A.
-                
+ 
+        config FIH_SEMC_S1
+            bool "FIH_SEMC_S1"
+            depends on FIH_PROJECT_S3A
+            default n
+            help
+                Enable/Disable SEMC S1 boot for S3A.
+               
         config PN544_I2C_NFC
 			tristate "PN544 NFC driver"
 			depends on I2C
@@ -68,7 +68,7 @@ if FIH_CONFIG_GROUP
             default y
             help
                 Select if you want CHARGING_WHEN_CONNECT_TO_PC_WHICH_UNDER_STANDBY_MODE.
-        #MTD-CONN-EH-USBPORTING-01+}
+        #MTD-CONN-EH-USBPORTING-01+}	
         
         # FIH-SW-MM-MC-BringUpCameraRawSensorS5k4e1-00+[
         config FIH_CAMERA
@@ -485,15 +485,6 @@ if FIH_CONFIG_GROUP
                 Enable to dump wakelock if it active.  
         # /*KERNEL-SC-SUSPEND_RESUME_WAKELOCK_LOG-01+] */
 
-        # /*FIH-Core-PK-DISABLE_SUSPEND-00+[ */
-        config FIH_DISABLE_SUSPEND
-            bool "FIH DISABLE SUSPEND"
-            depends on FIH_CONFIG_GROUP
-            default n
-            help
-                Disable suspend by wakelock.
-        # /*FIH-Core-PK-DISABLE_SUSPEND-00+] */
-
         #FIH-KERNEL-SC-sleep-func-00+[
         config FIH_HR_MSLEEP
             bool "FIH_HR_MSLEEP"
@@ -503,7 +494,7 @@ if FIH_CONFIG_GROUP
                 Provide more efficient sleep function.
         #FIH-KERNEL-SC-sleep-func-00+]
 
-        # FIH-KERNEL-HC-dynamically_disable_UART-00+]
+        # FIH-KERNEL-HC-dynamically_disable_UART-00+[
         config FIH_REMOVE_SERIAL_DYNAMICALLY
             bool "turn off serial port dynamically"
             default n
@@ -511,14 +502,22 @@ if FIH_CONFIG_GROUP
                 turn off serial port dynamically
         # FIH-KERNEL-HC-dynamically_disable_UART-00+]
 
-        # FIH-KERNEL-HC-Force_Trigger_Panic-00+]
+        # FIH-KERNEL-HC-Force_Trigger_Panic-00+[
         config FIH_FORCE_TRIGGER_PANIC
             bool "Force trigger panic"
             default n
             help
                 Say Y here if you want to trigger panic 
-	              by pressing power key more than 15s.
+                by pressing power key more than 15s.
         # FIH-KERNEL-HC-Force_Trigger_Panic-00+]
+
+        # CORE-HC-ANR_Kernel_Stack-00+[
+        config FIH_DUMP_KERNEL_STACK
+            bool "Dump Kernel Stack"
+            default n
+            help
+                Say Y here if you want to read /proc/pid/stack.
+        # CORE-HC-ANR_Kernel_Stack-00+]
 
         # FIH-SW3-KERNEL-TH-add_last_alog-00+[
         config FEATURE_FIH_SW3_LAST_ALOG
@@ -535,6 +534,7 @@ if FIH_CONFIG_GROUP
             help
                 if build debug, printk will not lost log when resume
 		# FIH-SW3-KERNEL-TH-buildtype_bebug-00+]
+
 #FIH-SW-MM-VH-DISPLAY-NICKI-04+[
     config FIH_SW_DISPLAY
             bool "FIH display driver"
@@ -548,14 +548,6 @@ if FIH_CONFIG_GROUP
             help
                 Queuing backlight commands before pan display, and send after pan display.
 #FIH-SW-MM-VH-DISPLAY-NICKI-04+]
-#MM-VH-DISPLAY-NICKI20+[
-        config FIH_UI_KPI_METER
-            depends on FIH_SW_DISPLAY
-            bool "Enable FIH UI KPI METER"
-            default n
-            help
-                Enable FIH UI KPI METER
-#MM-VH-DISPLAY-NICKI20+]
     endmenu
     # --- FIH_PROJECT_S3A}-------------------------------------------------- END
 endif

@@ -23,6 +23,7 @@
 #include <linux/init.h>
 #include <linux/nmi.h>
 #include <linux/dmi.h>
+#include <linux/coresight.h>
 #include <linux/fih_sw_info.h> //MTD-KERNEL-DL-POC-00
 
 #define PANIC_TIMER_STEP 100
@@ -99,6 +100,8 @@ void panic(const char *fmt, ...)
 	void *crash_timestamp_buffer_virt_addr = 0;
 	/*CORE-TH-TimestampOnRAMDump-00+]*/
 
+	coresight_abort();
+
 	/*
 	 * Disable local interrupts. This will prevent panic_smp_self_stop
 	 * from deadlocking the first cpu that invokes the panic, since
@@ -125,7 +128,14 @@ void panic(const char *fmt, ...)
 	va_start(args, fmt);
 	vsnprintf(buf, sizeof(buf), fmt, args);
 	va_end(args);
+#ifdef CONFIG_LGE_CRASH_HANDLER
+	set_kernel_crash_magic_number();
+	set_crash_store_enable();
+#endif
 	printk(KERN_EMERG "Kernel panic - not syncing: %s\n",buf);
+#ifdef CONFIG_LGE_CRASH_HANDLER
+	set_crash_store_disable();
+#endif
 #ifdef CONFIG_DEBUG_BUGVERBOSE
 	/*
 	 * Avoid nested stack-dumping if a panic occurs during oops processing
@@ -196,7 +206,7 @@ void panic(const char *fmt, ...)
 		 * shutting down.  But if there is a chance of
 		 * rebooting the system it will be rebooted.
 		 */
-		 
+
 		//MTD-KERNEL-DL-POC-00 +[
 		printk(KERN_EMERG "Kernel panic. Let's note!\n");
 		write_pwron_cause(HOST_KERNEL_PANIC); //MTD-KERNEL-DL-PWRON_CAUSE-00 +

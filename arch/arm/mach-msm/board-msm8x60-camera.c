@@ -15,7 +15,7 @@
 #include <linux/gpio.h>
 #include <linux/i2c.h>
 #include <linux/mfd/pmic8901.h>
-#include <mach/camera.h>
+#include <mach/board.h>
 #include <mach/board-msm8660.h>
 #include <mach/gpiomux.h>
 #include <mach/msm_bus_board.h>
@@ -324,15 +324,15 @@ static struct msm_bus_vectors cam_stereo_snapshot_vectors[] = {
 static struct msm_bus_paths cam_bus_client_config[] = {
 	{
 		ARRAY_SIZE(cam_init_vectors),
-		cam_zsl_vectors,
+		cam_init_vectors,
 	},
 	{
 		ARRAY_SIZE(cam_preview_vectors),
-		cam_zsl_vectors,
+		cam_preview_vectors,
 	},
 	{
 		ARRAY_SIZE(cam_video_vectors),
-		cam_zsl_vectors,
+		cam_video_vectors,
 	},
 	{
 		ARRAY_SIZE(cam_snapshot_vectors),

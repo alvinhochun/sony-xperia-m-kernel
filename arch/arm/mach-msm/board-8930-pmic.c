@@ -171,6 +171,8 @@ static struct pm8xxx_gpio_init pm8917_gpios[] __initdata = {
 
 /* Initial PM8917 MPP configurations */
 static struct pm8xxx_mpp_init pm8917_mpps[] __initdata = {
+	PM8917_MPP_INIT(PM8XXX_AMUX_MPP_3, A_INPUT,
+				PM8XXX_MPP_AIN_AMUX_CH8, DIN_TO_INT),
 	/* Configure MPP01 for USB ID detection */
 	PM8917_MPP_INIT(1, D_INPUT, PM8921_MPP_DIG_LEVEL_S4, DIN_TO_INT),
 };
@@ -250,8 +252,12 @@ static struct pm8xxx_adc_amux pm8038_adc_channels_data[] = {
 		ADC_DECIMATION_TYPE2, ADC_SCALE_DEFAULT},
 	{"chg_temp", CHANNEL_CHG_TEMP, CHAN_PATH_SCALING1, AMUX_RSV1,
 		ADC_DECIMATION_TYPE2, ADC_SCALE_DEFAULT},
+//FIH-SW3-KERNEL-EL-Chg-00		
 	{"AMUX_IN", ADC_MPP_1_AMUX4, CHAN_PATH_SCALING1, AMUX_RSV1, 
 		ADC_DECIMATION_TYPE3, ADC_SCALE_SYS_THERM}, 		
+//	{"pa_therm1", ADC_MPP_1_AMUX4, CHAN_PATH_SCALING1, AMUX_RSV1,
+//		ADC_DECIMATION_TYPE2, ADC_SCALE_PA_THERM},
+//FIH-SW3-KERNEL-EL-Chg-00
 	{"xo_therm", CHANNEL_MUXOFF, CHAN_PATH_SCALING1, AMUX_RSV0,
 		ADC_DECIMATION_TYPE2, ADC_SCALE_XOTHERM},
 	{"pa_therm0", CHANNEL_MPP_2, CHAN_PATH_SCALING2, AMUX_RSV1,
@@ -285,14 +291,6 @@ static struct pm8xxx_mpp_platform_data pm8xxx_mpp_pdata __devinitdata = {
 	.mpp_base	= PM8038_MPP_PM_TO_SYS(1),
 };
 
-/*MTD-SW-PERIPHERAL-AH-VIBRATOR-00++[*/
-static struct pm8xxx_vibrator_platform_data pm8038_vib_pdata = {
-	.initial_vibrate_ms  = 500,
-	.level_mV = 3000,
-	.max_timeout_ms = 15000,
-};
-/*MTD-SW-PERIPHERAL-AH-VIBRATOR-00++]*/
-
 static struct pm8xxx_rtc_platform_data pm8xxx_rtc_pdata __devinitdata = {
 	.rtc_write_enable	= true,
 	.rtc_alarm_powerup	= false,
@@ -319,7 +317,7 @@ static struct pm8921_charger_platform_data pm8921_chg_pdata __devinitdata = {
 	.max_voltage		= MAX_VOLTAGE_MV,
 	.min_voltage		= 3200,
 	.uvd_thresh_voltage	= 4050,
-	.alarm_low_mv		= 3600,	/* TODO: temp set to 3600, set back to 3400 in the future */
+	.alarm_low_mv		= 3400,
 	.alarm_high_mv		= 4000,
 	.resume_voltage_delta	= VMAXSEL_NORMAL_DELTA,
 	.resume_charge_percent	= 99,
@@ -338,9 +336,15 @@ static struct pm8921_charger_platform_data pm8921_chg_pdata __devinitdata = {
 	.rconn_mohm		= 18,
 };
 
-/* MM-VH-DISPLAY-NICKI20*[ */
+static struct pm8xxx_vibrator_platform_data pm8038_vib_pdata = {
+	.initial_vibrate_ms = 500,
+	.level_mV = 3000,
+	.max_timeout_ms = 15000,
+};
+
+/* MM-VH-DISPLAY-NICKI20.1*[ */
 #define PM8038_WLED_MAX_CURRENT		20
-/* MM-VH-DISPLAY-NICKI20*] */
+/* MM-VH-DISPLAY-NICKI20.1*] */
 #define PM8XXX_LED_PWM_PERIOD		1000
 #define PM8XXX_LED_PWM_DUTY_MS		20
 #define PM8038_RGB_LED_MAX_CURRENT	12
@@ -473,7 +477,7 @@ static struct pm8xxx_misc_platform_data pm8xxx_misc_pdata = {
 
 static struct pm8xxx_spk_platform_data pm8xxx_spk_pdata = {
 	.spk_add_enable		= false,
-	.cd_ng_threshold	= 0x0,/*MM-RC-NickiSS-00123**/
+	.cd_ng_threshold	= 0x0, /* MM-NC-Noise_Gate-00 */
 	.cd_nf_preamp_bias	= 0x1,
 	.cd_ng_hold		= 0x6,
 	.cd_ng_max_atten	= 0x0,
@@ -516,8 +520,8 @@ static struct pm8038_platform_data pm8038_platform_data __devinitdata = {
 	.ccadc_pdata		= &pm8xxx_ccadc_pdata,
 	.spk_pdata		= &pm8xxx_spk_pdata,
     /*MTD-SW-PERIPHERAL-AH-VIBRATOR-00++[*/
-	.vibrator_pdata  = &pm8038_vib_pdata,	
-    /*MTD-SW-PERIPHERAL-AH-VIBRATOR-00++]*/
+    .vibrator_pdata  = &pm8038_vib_pdata,   
+    /*MTD-SW-PERIPHERAL-AH-VIBRATOR-00++]*/	
 };
 
 static struct msm_ssbi_platform_data msm8930_ssbi_pm8038_pdata __devinitdata = {
@@ -607,10 +611,13 @@ void __init msm8930_init_pmic(void)
 					&msm8930_ssbi_pm8038_pdata;
 		pm8038_platform_data.num_regulators
 			= msm8930_pm8038_regulator_pdata_len;
-		if (machine_is_msm8930_mtp())
+		if (machine_is_msm8930_mtp() || machine_is_msm8930_evt())
 			pm8921_bms_pdata.battery_type = BATT_PALLADIUM;
 		else if (machine_is_msm8930_cdp())
 			pm8921_chg_pdata.has_dc_supply = true;
+		if (machine_is_msm8930_evt())
+			pm8038_platform_data.vibrator_pdata =
+				&pm8038_vib_pdata;
 	} else {
 		/* PM8917 configuration */
 		pmic_reset_irq = PM8917_IRQ_BASE + PM8921_RESOUT_IRQ;
@@ -624,6 +631,6 @@ void __init msm8930_init_pmic(void)
 			pm8921_chg_pdata.has_dc_supply = true;
 	}
 
-	if (!machine_is_msm8930_mtp())
+	if (!machine_is_msm8930_mtp() && !machine_is_msm8930_evt())
 		pm8921_chg_pdata.battery_less_hardware = 1;
 }

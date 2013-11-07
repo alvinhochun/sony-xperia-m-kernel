@@ -1,6 +1,5 @@
-/* Copyright (c) 2011-2012, The Linux Foundation. All rights reserved.
- * Copyright (c) 2011-2012, Code Aurora Forum. All rights reserved.
- * Copyright(C) 2013 Foxconn International Holdings, Ltd. All rights.
+/* Copyright (c) 2011-2013, The Linux Foundation. All rights reserved.
+ *  Copyright(C) 2013 Foxconn International Holdings, Ltd. All rights.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -51,6 +50,9 @@ void msm_sensor_adjust_frame_lines2(struct msm_sensor_ctrl_t *s_ctrl)
 	uint16_t cur_line = 0;
 	uint16_t exp_fl_lines = 0;
 	uint8_t int_time[3];
+	uint32_t fll = (s_ctrl->msm_sensor_reg->
+			output_settings[s_ctrl->curr_res].frame_length_lines *
+			s_ctrl->fps_divider) / Q10;
 	if (s_ctrl->sensor_exp_gain_info) {
 		msm_camera_i2c_read_seq(s_ctrl->sensor_i2c_client,
 			s_ctrl->sensor_exp_gain_info->coarse_int_time_addr-1,
@@ -60,8 +62,7 @@ void msm_sensor_adjust_frame_lines2(struct msm_sensor_ctrl_t *s_ctrl)
 		cur_line |= int_time[2] >> 4;
 		exp_fl_lines = cur_line +
 			s_ctrl->sensor_exp_gain_info->vert_offset;
-		if (exp_fl_lines > s_ctrl->msm_sensor_reg->
-			output_settings[s_ctrl->curr_res].frame_length_lines)
+		if (exp_fl_lines > fll)
 			msm_camera_i2c_write(s_ctrl->sensor_i2c_client,
 				s_ctrl->sensor_output_reg_addr->
 				frame_length_lines,
@@ -104,11 +105,12 @@ static void msm_sensor_delay_frames(struct msm_sensor_ctrl_t *s_ctrl)
 
 int32_t msm_sensor_write_init_settings(struct msm_sensor_ctrl_t *s_ctrl)
 {
-	int32_t rc;
-	rc = msm_sensor_write_all_conf_array(
-		s_ctrl->sensor_i2c_client,
-		s_ctrl->msm_sensor_reg->init_settings,
-		s_ctrl->msm_sensor_reg->init_size);
+	int32_t rc = 0;
+	if (s_ctrl->msm_sensor_reg->init_settings)
+		rc = msm_sensor_write_all_conf_array(
+			s_ctrl->sensor_i2c_client,
+			s_ctrl->msm_sensor_reg->init_settings,
+			s_ctrl->msm_sensor_reg->init_size);
 	return rc;
 }
 
@@ -143,6 +145,9 @@ int32_t msm_sensor_write_output_settings(struct msm_sensor_ctrl_t *s_ctrl,
 	uint16_t res)
 {
 	int32_t rc = -EFAULT;
+	uint32_t fll = (s_ctrl->msm_sensor_reg->
+		output_settings[res].frame_length_lines *
+		s_ctrl->fps_divider) / Q10;
 	struct msm_camera_i2c_reg_conf dim_settings[] = {
 		{s_ctrl->sensor_output_reg_addr->x_output,
 			s_ctrl->msm_sensor_reg->
@@ -154,8 +159,7 @@ int32_t msm_sensor_write_output_settings(struct msm_sensor_ctrl_t *s_ctrl,
 			s_ctrl->msm_sensor_reg->
 			output_settings[res].line_length_pclk},
 		{s_ctrl->sensor_output_reg_addr->frame_length_lines,
-			s_ctrl->msm_sensor_reg->
-			output_settings[res].frame_length_lines},
+			fll},
 	};
 
 	rc = msm_camera_i2c_write_tbl(s_ctrl->sensor_i2c_client, dim_settings,
@@ -168,7 +172,8 @@ void msm_sensor_start_stream(struct msm_sensor_ctrl_t *s_ctrl)
 	if (s_ctrl->curr_res >= s_ctrl->msm_sensor_reg->num_conf)
 		return;
 
-	if (s_ctrl->func_tbl->sensor_adjust_frame_lines)
+	if (s_ctrl->func_tbl->sensor_adjust_frame_lines &&
+			s_ctrl->vision_mode_flag == 0)
 		s_ctrl->func_tbl->sensor_adjust_frame_lines(s_ctrl);
 
 	msm_camera_i2c_write_tbl(
@@ -216,7 +221,7 @@ int32_t msm_sensor_set_fps(struct msm_sensor_ctrl_t *s_ctrl,
 }
 
 int32_t msm_sensor_write_exp_gain1(struct msm_sensor_ctrl_t *s_ctrl,
-		uint16_t gain, uint32_t line)
+		uint16_t gain, uint32_t line, int32_t luma_avg, uint16_t fgain)
 {
 	uint32_t fl_lines;
 	uint8_t offset;
@@ -225,7 +230,6 @@ int32_t msm_sensor_write_exp_gain1(struct msm_sensor_ctrl_t *s_ctrl,
 	offset = s_ctrl->sensor_exp_gain_info->vert_offset;
 	if (line > (fl_lines - offset))
 		fl_lines = line + offset;
-	fl_lines += (fl_lines & 0x01);
 
 	s_ctrl->func_tbl->sensor_group_hold_on(s_ctrl);
 	msm_camera_i2c_write(s_ctrl->sensor_i2c_client,
@@ -242,7 +246,7 @@ int32_t msm_sensor_write_exp_gain1(struct msm_sensor_ctrl_t *s_ctrl,
 }
 
 int32_t msm_sensor_write_exp_gain2(struct msm_sensor_ctrl_t *s_ctrl,
-		uint16_t gain, uint32_t line)
+		uint16_t gain, uint32_t line, int32_t luma_avg, uint16_t fgain)
 {
 	uint32_t fl_lines, ll_pclk, ll_ratio;
 	uint8_t offset;
@@ -296,7 +300,6 @@ int32_t msm_sensor_setting(struct msm_sensor_ctrl_t *s_ctrl,
 			int update_type, int res)
 {
 	int32_t rc = 0;
-
 	if (update_type == MSM_SENSOR_REG_INIT) {
 		s_ctrl->func_tbl->sensor_stop_stream(s_ctrl);
 		msm_sensor_write_init_settings(s_ctrl);
@@ -451,6 +454,9 @@ int32_t msm_sensor_config(struct msm_sensor_ctrl_t *s_ctrl, void __user *argp)
 			break;
 
 		case CFG_SET_EXP_GAIN:
+			if(s_ctrl->vision_mode_flag) {
+				break;
+			}
 			if (s_ctrl->func_tbl->
 			sensor_write_exp_gain == NULL) {
 				rc = -EFAULT;
@@ -461,10 +467,15 @@ int32_t msm_sensor_config(struct msm_sensor_ctrl_t *s_ctrl, void __user *argp)
 				sensor_write_exp_gain(
 					s_ctrl,
 					cdata.cfg.exp_gain.gain,
-					cdata.cfg.exp_gain.line);
+					cdata.cfg.exp_gain.line,
+					cdata.cfg.exp_gain.luma_avg,
+					cdata.cfg.exp_gain.fgain);
 			break;
 
 		case CFG_SET_PICT_EXP_GAIN:
+			if(s_ctrl->vision_mode_flag) {
+				break;
+			}
 			if (s_ctrl->func_tbl->
 			sensor_write_snapshot_exp_gain == NULL) {
 				rc = -EFAULT;
@@ -475,7 +486,9 @@ int32_t msm_sensor_config(struct msm_sensor_ctrl_t *s_ctrl, void __user *argp)
 				sensor_write_snapshot_exp_gain(
 					s_ctrl,
 					cdata.cfg.exp_gain.gain,
-					cdata.cfg.exp_gain.line);
+					cdata.cfg.exp_gain.line,
+					cdata.cfg.exp_gain.luma_avg,
+					cdata.cfg.exp_gain.fgain);
 			break;
 
 		case CFG_SET_MODE:
@@ -492,6 +505,18 @@ int32_t msm_sensor_config(struct msm_sensor_ctrl_t *s_ctrl, void __user *argp)
 			break;
 
 		case CFG_SET_EFFECT:
+			break;
+
+		case CFG_HDR_UPDATE:
+			if (s_ctrl->func_tbl->
+			sensor_hdr_update == NULL) {
+				rc = -EFAULT;
+				break;
+			}
+			rc = s_ctrl->func_tbl->
+					sensor_hdr_update(
+					   s_ctrl,
+					   &(cdata.cfg.hdr_update_parm));
 			break;
 
 		case CFG_SENSOR_INIT:
@@ -570,7 +595,21 @@ int32_t msm_sensor_config(struct msm_sensor_ctrl_t *s_ctrl, void __user *argp)
 			else
 				rc = -EFAULT;
 			break;
-
+		case CFG_SET_VISION_MODE:
+			if (s_ctrl->func_tbl->sensor_set_vision_mode)
+				rc = s_ctrl->func_tbl->sensor_set_vision_mode(
+					s_ctrl, cdata.cfg.vision_mode_enable);
+			else
+				rc = -EFAULT;
+				break;
+		case CFG_SET_VISION_AE:
+			if (s_ctrl->func_tbl->sensor_set_vision_ae_control)
+				rc = s_ctrl->func_tbl->
+					sensor_set_vision_ae_control(
+					s_ctrl, cdata.cfg.vision_ae);
+			else
+				rc = -EFAULT;
+			break;
 		default:
 			rc = -EFAULT;
 			break;
