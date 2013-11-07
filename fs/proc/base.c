@@ -292,6 +292,14 @@ static int lock_trace(struct task_struct *task)
 	int err = mutex_lock_killable(&task->signal->cred_guard_mutex);
 	if (err)
 		return err;
+	
+/* CORE-HC-ANR_Kernel_Stack-00+[ */
+#ifdef CONFIG_FIH_DUMP_KERNEL_STACK
+	pr_info("lock_trace: skip ptrace_may_access\n");
+	return 0;
+#endif
+/* CORE-HC-ANR_Kernel_Stack-00+] */
+	
 	if (!ptrace_may_access(task, PTRACE_MODE_ATTACH)) {
 		mutex_unlock(&task->signal->cred_guard_mutex);
 		return -EPERM;

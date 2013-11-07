@@ -467,7 +467,6 @@ static void synaptics_rmi4_proc_fngr(struct synaptics_rmi4_data *rmi4_data,
 	int y = currentf->y;
 	int wx = currentf->wx;
 	int wy = currentf->wy;
-	bool update_pointer = false;
 
 #ifdef TYPE_B_PROTOCOL
 	int prev_x = rmi4_data->finger_state[finger].x;
@@ -489,19 +488,16 @@ static void synaptics_rmi4_proc_fngr(struct synaptics_rmi4_data *rmi4_data,
 		rmi4_data->finger_state[finger].y = y;
 		rmi4_data->finger_state[finger].wx = wx;
 		rmi4_data->finger_state[finger].wy = wy;
-		update_pointer	= true;
 	} else if (prev_status && currentf->status) {
 		if (x != prev_x) {
 			input_report_abs(rmi4_data->input_dev,
 					ABS_MT_POSITION_X, x);
 			rmi4_data->finger_state[finger].x = x;
-			update_pointer	= true;
 		}
 		if (y != prev_y) {
 			input_report_abs(rmi4_data->input_dev,
 					ABS_MT_POSITION_Y, y);
 			rmi4_data->finger_state[finger].y = y;
-			update_pointer	= true;
 		}
 		if ((wx != prev_wx) || (wy != prev_wy)) {
 			input_report_abs(rmi4_data->input_dev,
@@ -510,7 +506,6 @@ static void synaptics_rmi4_proc_fngr(struct synaptics_rmi4_data *rmi4_data,
 					ABS_MT_TOUCH_MINOR, min(wx, wy));
 			rmi4_data->finger_state[finger].wx = wx;
 			rmi4_data->finger_state[finger].wy = wy;
-			update_pointer	= true;
 		}
 	}
 #else
@@ -524,7 +519,6 @@ static void synaptics_rmi4_proc_fngr(struct synaptics_rmi4_data *rmi4_data,
 		input_report_abs(rmi4_data->input_dev,
 				ABS_MT_TOUCH_MINOR, min(wx, wy));
 		input_mt_sync(rmi4_data->input_dev);
-		update_pointer	= true;
 	}
 #endif
 
@@ -550,11 +544,8 @@ static void synaptics_rmi4_proc_fngr(struct synaptics_rmi4_data *rmi4_data,
 			char	state_down = !touch_info->status && currentf->status, state_up = touch_info->status && !currentf->status;
 			char	show_log = state_down | state_up;
 
-			if( update_pointer == true )
-				++touch_info->count;
-
 			if( !state_up )
-				touch_info->x = x, touch_info->y = y, touch_info->wx = wx, touch_info->wy = wy;
+				touch_info->x = x, touch_info->y = y, touch_info->wx = wx, touch_info->wy = wy, ++touch_info->count;
 
 			if( show_log )
 			{

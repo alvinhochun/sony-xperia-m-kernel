@@ -92,7 +92,10 @@ void save_stack_trace_tsk(struct task_struct *tsk, struct stack_trace *trace)
 	data.skip = trace->skip;
 
 	if (tsk != current) {
-#ifdef CONFIG_SMP
+
+/* CORE-HC-ANR_Kernel_Stack-00*[ */
+/*#ifdef CONFIG_SMP*/
+#if defined(CONFIG_SMP) && !defined(CONFIG_FIH_DUMP_KERNEL_STACK)
 		/*
 		 * What guarantees do we have here that 'tsk' is not
 		 * running on another CPU?  For now, ignore it as we
@@ -102,12 +105,20 @@ void save_stack_trace_tsk(struct task_struct *tsk, struct stack_trace *trace)
 			trace->entries[trace->nr_entries++] = ULONG_MAX;
 		return;
 #else
+		
+		pr_info("save_stack_trace_tsk: %s[%d] %s[%d]\r\n",
+			current->comm, 
+			smp_processor_id(), 
+			tsk->comm, 
+			task_thread_info(tsk)->cpu);
+		
 		data.no_sched_functions = 1;
 		frame.fp = thread_saved_fp(tsk);
 		frame.sp = thread_saved_sp(tsk);
 		frame.lr = 0;		/* recovered from the stack */
 		frame.pc = thread_saved_pc(tsk);
 #endif
+/* CORE-HC-ANR_Kernel_Stack-00*] */
 	} else {
 		register unsigned long current_sp asm ("sp");
 

@@ -23,6 +23,7 @@ static unsigned int		timeout_buf=0;
 //MTD-SW3-PERIPHERAL-BJ-LED_DEBUG_MSG-00*{
 
 #define LED_ERR(fmt, args...) printk(KERN_ERR "[%s][ERR] Driver_LED : "fmt" \n", __func__, ##args)
+#define LED_WAN(fmt, args...) printk(KERN_WARNING"[%s][WAN] Driver_LED : "fmt" \n", __func__, ##args)
 #define LED_MSG(fmt, args...) printk(KERN_INFO "[%s][MSG] Driver_LED : "fmt" \n", __func__, ##args)
 
 #define DEBUG_LED

@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2013, Linux Foundation. All rights reserved.
+/* Copyright (c) 2010-2013, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -69,7 +69,7 @@ static void *res_trk_pmem_map
 	if (res_trk_get_enable_ion() && addr->alloc_handle) {
 		kernel_vaddr = (unsigned long *) ion_map_kernel(
 					ddl_context->video_ion_client,
-					addr->alloc_handle, UNCACHED);
+					addr->alloc_handle);
 		if (IS_ERR_OR_NULL(kernel_vaddr)) {
 			DDL_MSG_ERROR("%s():DDL ION client map failed\n",
 						 __func__);
@@ -84,7 +84,7 @@ static void *res_trk_pmem_map
 				0,
 				&iova,
 				&buffer_size,
-				UNCACHED, 0);
+				0, 0);
 		if (ret || !iova) {
 			DDL_MSG_ERROR(
 			"%s():DDL ION client iommu map failed, ret = %d iova = 0x%lx\n",
@@ -161,8 +161,10 @@ static void res_trk_pmem_free(struct ddl_buf_addr *addr)
 {
 	struct ddl_context *ddl_context;
 
-	if (!addr)
+	if (!addr) {
+		DDL_MSG_ERROR("\n%s() NULL address", __func__);
 		return;
+	}
 
 	ddl_context = ddl_get_context();
 	if (ddl_context->video_ion_client) {
@@ -213,7 +215,8 @@ static int res_trk_pmem_alloc
 			addr->alloc_handle = ion_alloc(
 					ddl_context->video_ion_client,
 					 alloc_size, SZ_4K,
-					res_trk_get_mem_type());
+					res_trk_get_mem_type(),
+					res_trk_get_ion_flags());
 			if (IS_ERR_OR_NULL(addr->alloc_handle)) {
 				DDL_MSG_ERROR("%s() :DDL ION alloc failed\n",
 						__func__);
@@ -380,7 +383,6 @@ static u32 res_trk_sel_clk_rate(unsigned long hclk_rate)
 	mutex_lock(&resource_context.lock);
 	if (clk_set_rate(resource_context.vcodec_clk,
 		hclk_rate)) {
-		VCDRES_MSG_ERROR("vidc hclk set rate failed\n");
 		status = false;
 	} else
 		resource_context.vcodec_clk_rate = hclk_rate;
@@ -541,7 +543,6 @@ int res_trk_update_bus_perf_level(struct vcd_dev_ctxt *dev_ctxt, u32 perf_level)
 	u32 enc_perf_level = 0, dec_perf_level = 0;
 	u32 bus_clk_index, client_type = 0;
 	int rc = 0;
-	bool turbo_enabled = false;
 	bool turbo_supported =
 		!resource_context.vidc_platform_data->disable_turbo;
 
@@ -551,9 +552,6 @@ int res_trk_update_bus_perf_level(struct vcd_dev_ctxt *dev_ctxt, u32 perf_level)
 			dec_perf_level += cctxt_itr->reqd_perf_lvl;
 		else
 			enc_perf_level += cctxt_itr->reqd_perf_lvl;
-
-		if (cctxt_itr->is_turbo_enabled)
-			turbo_enabled = true;
 		cctxt_itr = cctxt_itr->next;
 	}
 
@@ -570,18 +568,8 @@ int res_trk_update_bus_perf_level(struct vcd_dev_ctxt *dev_ctxt, u32 perf_level)
 
 	if (dev_ctxt->reqd_perf_lvl + dev_ctxt->curr_perf_lvl == 0)
 		bus_clk_index = 2;
-	else if ((!turbo_supported || !turbo_enabled) && bus_clk_index == 3) {
-		if (!turbo_supported)
-			VCDRES_MSG_MED("Warning: Turbo mode not supported "\
-					" falling back to 1080p bus\n");
+	else if (!turbo_supported && bus_clk_index == 3)
 		bus_clk_index = 2;
-	}
-
-	if (bus_clk_index == 3)
-		dev_ctxt->turbo_mode_set = true;
-	else
-		dev_ctxt->turbo_mode_set = false;
-
 	bus_clk_index = (bus_clk_index << 1) + (client_type + 1);
 	VCDRES_MSG_LOW("%s(), bus_clk_index = %d", __func__, bus_clk_index);
 	VCDRES_MSG_LOW("%s(),context.pcl = %x", __func__, resource_context.pcl);
@@ -637,11 +625,8 @@ u32 res_trk_set_perf_level(u32 req_perf_lvl, u32 *pn_set_perf_lvl,
 		*pn_set_perf_lvl = RESTRK_1080P_TURBO_PERF_LEVEL;
 	}
 
-	if ((!turbo_supported || !dev_ctxt->turbo_mode_set) &&
+	if (!turbo_supported &&
 		 *pn_set_perf_lvl == RESTRK_1080P_TURBO_PERF_LEVEL) {
-		if (!turbo_supported)
-			VCDRES_MSG_ERROR("Warning: Turbo mode not supported "\
-					" falling back to 1080p clocks\n");
 		vidc_freq = vidc_clk_table[2];
 		*pn_set_perf_lvl = RESTRK_1080P_MAX_PERF_LEVEL;
 	}
@@ -655,6 +640,8 @@ u32 res_trk_set_perf_level(u32 req_perf_lvl, u32 *pn_set_perf_lvl,
 			__func__, vidc_freq);
 		if (!res_trk_sel_clk_rate(vidc_freq)) {
 			if (vidc_freq == vidc_clk_table[4]) {
+				VCDRES_MSG_MED("%s(): Setting vidc freq "\
+					"to %u\n", __func__, (u32)vidc_clk_table[3]);
 				if (res_trk_sel_clk_rate(vidc_clk_table[3]))
 					goto ret;
 			}
@@ -753,6 +740,9 @@ void res_trk_init(struct device *device, u32 irq)
 			resource_context.vidc_platform_data->disable_dmx;
 			resource_context.disable_fullhd =
 			resource_context.vidc_platform_data->disable_fullhd;
+			resource_context.enable_sec_metadata =
+			resource_context.vidc_platform_data->
+				enable_sec_metadata;
 #ifdef CONFIG_MSM_BUS_SCALING
 			resource_context.vidc_bus_client_pdata =
 			resource_context.vidc_platform_data->
@@ -847,15 +837,29 @@ int res_trk_get_mem_type(void)
 	if (resource_context.vidc_platform_data->enable_ion) {
 		if (res_trk_check_for_sec_session()) {
 			mem_type = ION_HEAP(mem_type);
-	if (resource_context.res_mem_type != DDL_FW_MEM)
-		mem_type |= ION_SECURE;
-	else if (res_trk_is_cp_enabled())
-		mem_type |= ION_SECURE;
 	} else
 		mem_type = (ION_HEAP(mem_type) |
 			ION_HEAP(ION_IOMMU_HEAP_ID));
 	}
+
 	return mem_type;
+}
+
+unsigned int res_trk_get_ion_flags(void)
+{
+	unsigned int flags = 0;
+	if (resource_context.res_mem_type == DDL_FW_MEM)
+		return flags;
+
+	if (resource_context.vidc_platform_data->enable_ion) {
+		if (res_trk_check_for_sec_session()) {
+			if (resource_context.res_mem_type != DDL_FW_MEM)
+				flags |= ION_SECURE;
+			else if (res_trk_is_cp_enabled())
+				flags |= ION_SECURE;
+		}
+	}
+	return flags;
 }
 
 u32 res_trk_is_cp_enabled(void)
@@ -896,6 +900,10 @@ void res_trk_set_mem_type(enum ddl_mem_area mem_type)
 u32 res_trk_get_disable_fullhd(void)
 {
 	return resource_context.disable_fullhd;
+}
+u32 res_trk_get_enable_sec_metadata(void)
+{
+	return resource_context.enable_sec_metadata;
 }
 
 int res_trk_enable_iommu_clocks(void)
@@ -1008,9 +1016,9 @@ int res_trk_open_secure_session()
 	mutex_unlock(&resource_context.secure_lock);
 	return 0;
 unsecure_cmd_heap:
-	msm_ion_unsecure_heap(ION_HEAP(resource_context.memtype));
-unsecure_memtype_heap:
 	msm_ion_unsecure_heap(ION_HEAP(resource_context.cmd_mem_type));
+unsecure_memtype_heap:
+	msm_ion_unsecure_heap(ION_HEAP(resource_context.memtype));
 disable_iommu_clks:
 	res_trk_disable_iommu_clocks();
 error_open:

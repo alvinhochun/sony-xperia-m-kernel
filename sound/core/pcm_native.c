@@ -1,6 +1,7 @@
 /*
  *  Digital Audio (PCM) abstract layer
  *  Copyright (c) by Jaroslav Kysela <perex@perex.cz>
+ *  Copyright (C) 2013 Foxconn International Holdings, Ltd. All rights reserved.
  *
  *
  *   This program is free software; you can redistribute it and/or modify
@@ -34,8 +35,8 @@
 #include <sound/pcm_params.h>
 #include <sound/timer.h>
 #include <sound/minors.h>
-#include <linux/gpio.h>
 #include <asm/io.h>
+#include <linux/gpio.h>  /* MM-NC-HAC-00 */
 #if defined(CONFIG_MIPS) && defined(CONFIG_DMA_NONCOHERENT)
 #include <dma-coherence.h>
 #endif
@@ -449,7 +450,7 @@ static int snd_pcm_hw_params(struct snd_pcm_substream *substream,
 	runtime->silence_threshold = 0;
 	runtime->silence_size = 0;
 	runtime->boundary = runtime->buffer_size;
-	while (runtime->boundary * 2 <= LONG_MAX - runtime->buffer_size)
+	while (runtime->boundary * 2 * runtime->channels <= LONG_MAX - runtime->buffer_size) /* MM-AY-NIKSS03563-02-- */
 		runtime->boundary *= 2;
 
 	snd_pcm_timer_resolution_change(substream);
@@ -2605,33 +2606,32 @@ static int snd_pcm_common_ioctl1(struct file *file,
 	case SNDRV_COMPRESS_GET_PARAMS:
 	case SNDRV_COMPRESS_TSTAMP:
 	case SNDRV_COMPRESS_DRAIN:
+	case SNDRV_COMPRESS_METADATA_MODE:
 		return snd_compressed_ioctl(substream, cmd, arg);
-       case SNDRV_PCM_IOCTL_OPENHAC:
-       {     
-              if (gpio_request(79, "CDC_REV_EN") == 0) {
-                           int ret = 0;
-                           ret = gpio_tlmm_config(
-                                           GPIO_CFG(
-                                           79, 0,
-                                           GPIO_CFG_OUTPUT,
-                                           GPIO_CFG_PULL_UP,
-                                           GPIO_CFG_2MA),
-                                           GPIO_CFG_ENABLE);
-                        
-                           if (ret)
-                                   pr_err("%s: Failed to configure CDC_REV_EN gpio 79\n", __func__);
-      }
-            gpio_set_value(79, 1);
-            printk("__ENABLE HAC\n");
-            return 0;
-       }
-       case SNDRV_PCM_IOCTL_CLOSEHAC:
-       {
-                gpio_set_value(79, 0);
-                printk("__DISABLE HAC\n");
-                return 0;
-        }
-
+/* MM-NC-HAC-00-[+ */
+	case SNDRV_PCM_IOCTL_OPENHAC:
+	{     
+		if (gpio_request(79, "CDC_REV_EN") == 0) {
+			int ret = 0;
+			ret = gpio_tlmm_config(GPIO_CFG(79, 0,
+											GPIO_CFG_OUTPUT,
+											GPIO_CFG_PULL_UP,
+											GPIO_CFG_2MA),
+									GPIO_CFG_ENABLE);
+			if (ret)
+				pr_err("%s: Failed to configure CDC_REV_EN gpio 79\n", __func__);
+		}
+		gpio_set_value(79, 1);
+		printk("__ENABLE HAC\n");
+		return 0;
+	}
+	case SNDRV_PCM_IOCTL_CLOSEHAC:
+	{
+		gpio_set_value(79, 0);
+		printk("__DISABLE HAC\n");
+		return 0;
+	}
+/* MM-NC-HAC-00-]- */
 	}
 	snd_printd("unknown ioctl = 0x%x\n", cmd);
 	return -ENOTTY;

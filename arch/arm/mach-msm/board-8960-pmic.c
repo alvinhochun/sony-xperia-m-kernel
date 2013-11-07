@@ -406,7 +406,7 @@ static struct pm8921_charger_platform_data pm8921_chg_pdata __devinitdata = {
 	.resume_charge_percent	= 99,
 	.term_current		= CHG_TERM_MA,
 	.cool_temp		= 10,
-	.warm_temp		= 40,
+	.warm_temp		= 45,
 	.temp_check_period	= 1,
 	.max_bat_chg_current	= 1100,
 	.cool_bat_chg_current	= 350,
@@ -416,7 +416,6 @@ static struct pm8921_charger_platform_data pm8921_chg_pdata __devinitdata = {
 	.thermal_mitigation	= pm8921_therm_mitigation,
 	.thermal_levels		= ARRAY_SIZE(pm8921_therm_mitigation),
 	.rconn_mohm		= 18,
-	.keep_btm_on_suspend = 1,
 };
 
 static struct pm8xxx_misc_platform_data pm8xxx_misc_pdata = {
@@ -436,6 +435,9 @@ static struct pm8921_bms_platform_data pm8921_bms_pdata __devinitdata = {
 	.low_voltage_calc_ms		= 1000,
 	.alarm_low_mv			= 3400,
 	.alarm_high_mv			= 4000,
+	.high_ocv_correction_limit_uv	= 50,
+	.low_ocv_correction_limit_uv	= 100,
+	.hold_soc_est			= 3,
 };
 
 #define	PM8921_LC_LED_MAX_CURRENT	4	/* I = 4mA */

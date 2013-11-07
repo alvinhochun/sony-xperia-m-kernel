@@ -1,4 +1,4 @@
-/* Copyright (c) 2011-2012, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2011-2013, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -200,6 +200,7 @@ struct pm8921_charger_platform_data {
 	unsigned int			warm_bat_chg_current;
 	unsigned int			cool_bat_voltage;
 	unsigned int			warm_bat_voltage;
+	int				hysteresis_temp;
 	unsigned int			(*get_batt_capacity_percent) (void);
 	int64_t				batt_id_min;
 	int64_t				batt_id_max;
@@ -223,6 +224,7 @@ struct pm8921_charger_platform_data {
 	int				btc_delay_ms;
 	int				btc_panic_if_cant_stop_chg;
 	int				stop_chg_upon_expiry;
+	bool				disable_chg_rmvl_wrkarnd;
 };
 
 enum pm8921_charger_source {

@@ -3207,6 +3207,7 @@ int smd_core_init(void)
 			flags, "smd_dev", 0);
 	if (r < 0)
 		return r;
+	interrupt_stats[SMD_MODEM].smd_interrupt_id = INT_A9_M2A_0;
 	r = enable_irq_wake(INT_A9_M2A_0);
 	if (r < 0)
 		pr_err("smd_core_init: "
@@ -3218,6 +3219,7 @@ int smd_core_init(void)
 		free_irq(INT_A9_M2A_0, 0);
 		return r;
 	}
+	interrupt_stats[SMD_MODEM].smsm_interrupt_id = INT_A9_M2A_5;
 	r = enable_irq_wake(INT_A9_M2A_5);
 	if (r < 0)
 		pr_err("smd_core_init: "
@@ -3235,6 +3237,7 @@ int smd_core_init(void)
 		return r;
 	}
 
+	interrupt_stats[SMD_Q6].smd_interrupt_id = INT_ADSP_A11;
 	r = request_irq(INT_ADSP_A11_SMSM, smsm_dsp_irq_handler,
 			flags, "smsm_dev", smsm_dsp_irq_handler);
 	if (r < 0) {
@@ -3244,6 +3247,7 @@ int smd_core_init(void)
 		return r;
 	}
 
+	interrupt_stats[SMD_Q6].smsm_interrupt_id = INT_ADSP_A11_SMSM;
 	r = enable_irq_wake(INT_ADSP_A11);
 	if (r < 0)
 		pr_err("smd_core_init: "
@@ -3269,6 +3273,7 @@ int smd_core_init(void)
 		return r;
 	}
 
+	interrupt_stats[SMD_DSPS].smd_interrupt_id = INT_DSPS_A11;
 	r = enable_irq_wake(INT_DSPS_A11);
 	if (r < 0)
 		pr_err("smd_core_init: "
@@ -3287,6 +3292,7 @@ int smd_core_init(void)
 		return r;
 	}
 
+	interrupt_stats[SMD_WCNSS].smd_interrupt_id = INT_WCNSS_A11;
 	r = enable_irq_wake(INT_WCNSS_A11);
 	if (r < 0)
 		pr_err("smd_core_init: "
@@ -3304,6 +3310,7 @@ int smd_core_init(void)
 		return r;
 	}
 
+	interrupt_stats[SMD_WCNSS].smsm_interrupt_id = INT_WCNSS_A11_SMSM;
 	r = enable_irq_wake(INT_WCNSS_A11_SMSM);
 	if (r < 0)
 		pr_err("smd_core_init: "
@@ -3324,6 +3331,7 @@ int smd_core_init(void)
 		return r;
 	}
 
+	interrupt_stats[SMD_DSPS].smsm_interrupt_id = INT_DSPS_A11_SMSM;
 	r = enable_irq_wake(INT_DSPS_A11_SMSM);
 	if (r < 0)
 		pr_err("smd_core_init: "
@@ -3453,6 +3461,8 @@ int smd_core_platform_init(struct platform_device *pdev)
 			goto intr_failed;
 		}
 
+		interrupt_stats[cfg->irq_config_id].smd_interrupt_id
+						 = cfg->smd_int.irq_id;
 		/* only init smsm structs if this edge supports smsm */
 		if (cfg->smsm_int.irq_id)
 			ret = intr_init(
@@ -3468,6 +3478,9 @@ int smd_core_platform_init(struct platform_device *pdev)
 			goto intr_failed;
 		}
 
+		if (cfg->smsm_int.irq_id)
+			interrupt_stats[cfg->irq_config_id].smsm_interrupt_id
+						 = cfg->smsm_int.irq_id;
 		if (cfg->subsys_name)
 			strlcpy(edge_to_pids[cfg->edge].subsys_name,
 				cfg->subsys_name, SMD_MAX_CH_NAME_LEN);
@@ -3620,6 +3633,11 @@ void fih_parse_power_on_cause (void)
 			if (*hw_wd_ptr == FIH_HW_WD_SIGNATURE)
 				*pwron_cause_ptr |= MTD_PWR_ON_EVENT_HW_WD_RESET;
 
+			//CORE-DL-AddPocForRPM-00 +[+
+			if (*pwron_cause_ptr == MTD_PWR_ON_EVENT_RPM_WD_RESET)
+				printk(KERN_ERR "System was reset by RPM Watchdog Reset!\r\n");
+			//CORE-DL-AddPocForRPM-00 +]
+
 			fih_power_on_cause |= *pwron_cause_ptr;
 			if ((*pwron_cause_ptr == MTD_PWR_ON_EVENT_CLEAN_DATA) ||
 				(*pwron_cause_ptr == MTD_PWR_ON_EVENT_SOFTWARE_RESET) || //CORE-DL-AddPocForSwReset-00
@@ -3645,7 +3663,7 @@ void fih_parse_power_on_cause (void)
 //MTD-BSP-LC-SMEM-00 +[
 void fih_get_oem_info(void)
 {
-  struct smem_oem_info *fih_smem_info = smem_alloc2(SMEM_ID_VENDOR0, sizeof(oem_info));   //MTD-BSP-LC-SMEM-01 *
+  struct smem_oem_info *fih_smem_info = smem_alloc2(SMEM_ID_VENDOR0, sizeof(oem_info));
 
   printk(KERN_ERR "FIH kernel : Enter fih_get_oem_info() function.\r\n");
 
@@ -3672,14 +3690,14 @@ void fih_get_oem_info(void)
   fih_band_id = (fih_hw_id>>BAND_ID_SHIFT_MASK)&0xff;
   printk(KERN_ERR "FIH kernel - fih_band_id = %d \r\n",fih_band_id);
 
-  fih_sim_type_value= (fih_hw_id>>SIM_ID_SHIFT_MASK)&0x3;
+  fih_sim_type_value = (fih_hw_id>>SIM_ID_SHIFT_MASK)&0x3;
   printk(KERN_ERR "FIH kernel - fih_sim_type_value = %d \r\n",fih_sim_type_value);
 
-  printk(KERN_ERR "linux git head = %s \r\n",VER_HOST_GIT_COMMIT);  //BSP-REXER-GIT-00+
+  printk(KERN_ERR "HLOS git head = %s \r\n",VER_HOST_GIT_COMMIT);  //BSP-REXER-GIT-00+
 
 //MTD-KERNEL-DL-POC-00 +[
   fih_parse_power_on_cause();
-  printk(KERN_ERR "FIH kernel - power on cause = 0x%08x \r\n", fih_power_on_cause);
+  printk(KERN_EMERG "FIH kernel - power on cause = 0x%08x \r\n", fih_power_on_cause);
 //MTD-KERNEL-DL-POC-00 +]
 } /*fih_get_oem_info*/
 EXPORT_SYMBOL(fih_get_oem_info);
@@ -3740,7 +3758,7 @@ EXPORT_SYMBOL(fih_get_amss_version);
 //BSP-REXER-GIT-00+[
 char *fih_get_nonHLOS_git_head(void)
 {
-	return fih_nonHLOS_git_head;
+       return fih_nonHLOS_git_head;
 } 
 EXPORT_SYMBOL(fih_get_nonHLOS_git_head);
 //BSP-REXER-GIT-00+]

@@ -28,7 +28,7 @@
 #include <linux/miscdevice.h>
 
 #define ADB_BULK_BUFFER_SIZE           4096
-
+#define DEBUG 1
 /* number of tx requests to allocate */
 #define TX_REQ_MAX 4
 
@@ -197,7 +197,10 @@ static void adb_complete_in(struct usb_ep *ep, struct usb_request *req)
 	struct adb_dev *dev = _adb_dev;
 
 	if (req->status != 0)
+	{
+		printk(KERN_ERR "[adb]adb_complete_in error\n");
 		atomic_set(&dev->error, 1);
+		}
 
 	adb_req_put(dev, &dev->tx_idle, req);
 
@@ -210,7 +213,10 @@ static void adb_complete_out(struct usb_ep *ep, struct usb_request *req)
 
 	dev->rx_done = 1;
 	if (req->status != 0 && req->status != -ECONNRESET)
+	{
+		printk(KERN_ERR "[adb]adb_complete_out error\n");
 		atomic_set(&dev->error, 1);
+		}
 
 	wake_up(&dev->read_wq);
 }
@@ -228,7 +234,7 @@ static int adb_create_bulk_endpoints(struct adb_dev *dev,
 
 	ep = usb_ep_autoconfig(cdev->gadget, in_desc);
 	if (!ep) {
-		DBG(cdev, "usb_ep_autoconfig for ep_in failed\n");
+		printk(KERN_ERR "[adb]usb_ep_autoconfig for ep_in failed\n");
 		return -ENODEV;
 	}
 	DBG(cdev, "usb_ep_autoconfig for ep_in got %s\n", ep->name);
@@ -237,7 +243,7 @@ static int adb_create_bulk_endpoints(struct adb_dev *dev,
 
 	ep = usb_ep_autoconfig(cdev->gadget, out_desc);
 	if (!ep) {
-		DBG(cdev, "usb_ep_autoconfig for ep_out failed\n");
+		printk(KERN_ERR "[adb]usb_ep_autoconfig for ep_out failed\n");
 		return -ENODEV;
 	}
 	DBG(cdev, "usb_ep_autoconfig for adb ep_out got %s\n", ep->name);
@@ -262,7 +268,7 @@ static int adb_create_bulk_endpoints(struct adb_dev *dev,
 	return 0;
 
 fail:
-	printk(KERN_ERR "adb_bind() could not allocate requests\n");
+	printk(KERN_ERR "[adb]adb_bind() could not allocate requests\n");
 	return -1;
 }
 
@@ -276,13 +282,22 @@ static ssize_t adb_read(struct file *fp, char __user *buf,
 
 	pr_debug("adb_read(%d)\n", count);
 	if (!_adb_dev)
+	{
+		printk(KERN_ERR "[adb]adb_read no device!\n");
 		return -ENODEV;
+		}
 
 	if (count > ADB_BULK_BUFFER_SIZE)
+	{
+		printk(KERN_ERR "[adb]adb_read invaild!\n");
 		return -EINVAL;
+		}
 
 	if (adb_lock(&dev->read_excl))
+	{
+		printk(KERN_ERR "[adb]adb_read busy!\n");
 		return -EBUSY;
+		}
 
 	/* we will block until we're online */
 	while (!(atomic_read(&dev->online) || atomic_read(&dev->error))) {
@@ -292,10 +307,12 @@ static ssize_t adb_read(struct file *fp, char __user *buf,
 			atomic_read(&dev->error)));
 		if (ret < 0) {
 			adb_unlock(&dev->read_excl);
+			printk(KERN_ERR "[adb]adb_read wait event failed!\n");
 			return ret;
 		}
 	}
 	if (atomic_read(&dev->error)) {
+		printk(KERN_ERR "[adb]adb_read IO error!\n");
 		r = -EIO;
 		goto done;
 	}
@@ -307,7 +324,7 @@ requeue_req:
 	dev->rx_done = 0;
 	ret = usb_ep_queue(dev->ep_out, req, GFP_ATOMIC);
 	if (ret < 0) {
-		pr_debug("adb_read: failed to queue req %p (%d)\n", req, ret);
+		printk(KERN_ERR "[adb]adb_read: failed to queue req %p (%d)\n", req, ret);
 		r = -EIO;
 		atomic_set(&dev->error, 1);
 		goto done;
@@ -316,10 +333,14 @@ requeue_req:
 	}
 
 	/* wait for a request to complete */
-	ret = wait_event_interruptible(dev->read_wq, dev->rx_done);
+	ret = wait_event_interruptible(dev->read_wq, dev->rx_done ||
+				atomic_read(&dev->error));
 	if (ret < 0) {
 		if (ret != -ERESTARTSYS)
+		{
+			printk(KERN_ERR "[adb]adb_read error!\n");
 		atomic_set(&dev->error, 1);
+			}
 		r = ret;
 		usb_ep_dequeue(dev->ep_out, req);
 		goto done;
@@ -332,12 +353,21 @@ requeue_req:
 		pr_debug("rx %p %d\n", req, req->actual);
 		xfer = (req->actual < count) ? req->actual : count;
 		if (copy_to_user(buf, req->buf, xfer))
+		{
+		printk(KERN_ERR "[adb]adb_read fault!\n");
 			r = -EFAULT;
+			}
 
 	} else
+	{
+		printk(KERN_ERR "[adb]adb_read IO error[2]!\n");
 		r = -EIO;
+		}
 
 done:
+	if (atomic_read(&dev->error))
+		wake_up(&dev->write_wq);
+
 	adb_unlock(&dev->read_excl);
 	pr_debug("adb_read returning %d\n", r);
 	return r;
@@ -352,15 +382,21 @@ static ssize_t adb_write(struct file *fp, const char __user *buf,
 	int ret;
 
 	if (!_adb_dev)
+	{
+		printk(KERN_ERR "[adb]adb_write no device!\n");
 		return -ENODEV;
+		}
 	pr_debug("adb_write(%d)\n", count);
 
 	if (adb_lock(&dev->write_excl))
+	{
+		printk(KERN_ERR "[adb]adb_write busy!\n");
 		return -EBUSY;
+		}
 
 	while (count > 0) {
 		if (atomic_read(&dev->error)) {
-			pr_debug("adb_write dev->error\n");
+			pr_debug("[adb]adb_write dev->error\n");
 			r = -EIO;
 			break;
 		}
@@ -373,6 +409,7 @@ static ssize_t adb_write(struct file *fp, const char __user *buf,
 
 		if (ret < 0) {
 			r = ret;
+			printk(KERN_ERR "[adb]adb_write wait event failed!\n");
 			break;
 		}
 
@@ -382,6 +419,7 @@ static ssize_t adb_write(struct file *fp, const char __user *buf,
 			else
 				xfer = count;
 			if (copy_from_user(req->buf, buf, xfer)) {
+				printk(KERN_ERR "[adb]adb_write fault!\n");
 				r = -EFAULT;
 				break;
 			}
@@ -389,7 +427,7 @@ static ssize_t adb_write(struct file *fp, const char __user *buf,
 			req->length = xfer;
 			ret = usb_ep_queue(dev->ep_in, req, GFP_ATOMIC);
 			if (ret < 0) {
-				pr_debug("adb_write: xfer error %d\n", ret);
+				pr_debug("[adb]adb_write: xfer error %d\n", ret);
 				atomic_set(&dev->error, 1);
 				r = -EIO;
 				break;
@@ -406,6 +444,9 @@ static ssize_t adb_write(struct file *fp, const char __user *buf,
 	if (req)
 		adb_req_put(dev, &dev->tx_idle, req);
 
+	if (atomic_read(&dev->error))
+		wake_up(&dev->read_wq);
+
 	adb_unlock(&dev->write_excl);
 	pr_debug("adb_write returning %d\n", r);
 	return r;
@@ -413,12 +454,21 @@ static ssize_t adb_write(struct file *fp, const char __user *buf,
 
 static int adb_open(struct inode *ip, struct file *fp)
 {
-	pr_info("adb_open\n");
+	static DEFINE_RATELIMIT_STATE(rl, 10*HZ, 1);
+
+	if (__ratelimit(&rl))
+		pr_info("adb_open\n");
 	if (!_adb_dev)
+	{
+		printk(KERN_ERR "[adb]adb_open no device!\n");
 		return -ENODEV;
+		}
 
 	if (adb_lock(&_adb_dev->open_excl))
+	{
+		printk(KERN_ERR "[adb]adb_open busy!\n");
 		return -EBUSY;
+		}
 
 	fp->private_data = _adb_dev;
 
@@ -436,7 +486,11 @@ static int adb_open(struct inode *ip, struct file *fp)
 
 static int adb_release(struct inode *ip, struct file *fp)
 {
-	pr_info("adb_release\n");
+	static DEFINE_RATELIMIT_STATE(rl, 10*HZ, 1);
+
+	if (__ratelimit(&rl))
+		pr_info("adb_release\n");
+	dump_stack();//For Monkey test trace call stack
 
 	/*
 	 * ADB daemon closes the device file after I/O error.  The
@@ -447,6 +501,7 @@ static int adb_release(struct inode *ip, struct file *fp)
 	 * commands like "adb root" and "adb usb".
 	 */
 	if (_adb_dev->notify_close) {
+		printk(KERN_ERR "[adb]adb_release notify_close!!\r\n");
 		adb_closed_callback();
 		_adb_dev->close_notified = true;
 	}
@@ -482,7 +537,7 @@ adb_function_bind(struct usb_configuration *c, struct usb_function *f)
 	int			ret;
 
 	dev->cdev = cdev;
-	DBG(cdev, "adb_function_bind dev: %p\n", dev);
+	printk(KERN_DEBUG "[adb]adb_function_bind dev: %p\n", dev);
 
 	/* allocate interface ID(s) */
 	id = usb_interface_id(c, f);
@@ -516,7 +571,7 @@ adb_function_unbind(struct usb_configuration *c, struct usb_function *f)
 	struct adb_dev	*dev = func_to_adb(f);
 	struct usb_request *req;
 
-
+	printk(KERN_DEBUG "[adb]adb_function_unbind\n");
 	atomic_set(&dev->online, 0);
 	atomic_set(&dev->error, 1);
 
@@ -539,13 +594,13 @@ static int adb_function_set_alt(struct usb_function *f,
 	ret = config_ep_by_speed(cdev->gadget, f, dev->ep_in);
 	if (ret) {
 		dev->ep_in->desc = NULL;
-		ERROR(cdev, "config_ep_by_speed failes for ep %s, result %d\n",
+		ERROR(cdev, "[adb]config_ep_by_speed failes for ep %s, result %d\n",
 				dev->ep_in->name, ret);
 		return ret;
 	}
 	ret = usb_ep_enable(dev->ep_in);
 	if (ret) {
-		ERROR(cdev, "failed to enable ep %s, result %d\n",
+		ERROR(cdev, "[adb]failed to enable ep %s, result %d\n",
 			dev->ep_in->name, ret);
 		return ret;
 	}
@@ -553,14 +608,14 @@ static int adb_function_set_alt(struct usb_function *f,
 	ret = config_ep_by_speed(cdev->gadget, f, dev->ep_out);
 	if (ret) {
 		dev->ep_out->desc = NULL;
-		ERROR(cdev, "config_ep_by_speed failes for ep %s, result %d\n",
+		ERROR(cdev, "[adb]config_ep_by_speed failes for ep %s, result %d\n",
 			dev->ep_out->name, ret);
 		usb_ep_disable(dev->ep_in);
 		return ret;
 	}
 	ret = usb_ep_enable(dev->ep_out);
 	if (ret) {
-		ERROR(cdev, "failed to enable ep %s, result %d\n",
+		ERROR(cdev, "[adb]failed to enable ep %s, result %d\n",
 				dev->ep_out->name, ret);
 		usb_ep_disable(dev->ep_in);
 		return ret;
@@ -577,7 +632,7 @@ static void adb_function_disable(struct usb_function *f)
 	struct adb_dev	*dev = func_to_adb(f);
 	struct usb_composite_dev	*cdev = dev->cdev;
 
-	DBG(cdev, "adb_function_disable cdev %p\n", cdev);
+	printk(KERN_DEBUG "[adb]adb_function_disable cdev %p\n", cdev);
 	/*
 	 * Bus reset happened or cable disconnected.  No
 	 * need to disable the configuration now.  We will
@@ -599,7 +654,7 @@ static int adb_bind_config(struct usb_configuration *c)
 {
 	struct adb_dev *dev = _adb_dev;
 
-	printk(KERN_INFO "adb_bind_config\n");
+	printk(KERN_INFO "[adb]adb_bind_config\n");
 
 	dev->cdev = c->cdev;
 	dev->function.name = "adb";

@@ -290,7 +290,7 @@ static int __init modem_8960_init(void)
 	}
 //CORE-DL-AddInitStringForMtbf-00 +]
 
-	if (cpu_is_apq8064() || cpu_is_apq8064ab())
+	if (soc_class_is_apq8064())
 		return -ENODEV;
 
 	ret = smsm_state_cb_register(SMSM_MODEM_STATE, SMSM_RESET,

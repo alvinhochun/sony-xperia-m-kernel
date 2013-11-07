@@ -2195,6 +2195,7 @@ static int mxt_suspend(struct device *dev)
 	}
 
 	mutex_unlock(&input_dev->mutex);
+	mxt_release_all(data);
 
 	/* put regulators in low power mode */
 	error = mxt_regulator_lpm(data, true);
@@ -2219,7 +2220,9 @@ static int mxt_resume(struct device *dev)
 		dev_err(dev, "failed to enter high power mode\n");
 		return error;
 	}
-
+	mxt_write_object(data, MXT_GEN_COMMAND_T6,
+			MXT_COMMAND_RESET, 1);
+	msleep(MXT_RESET_TIME);
 	mutex_lock(&input_dev->mutex);
 
 	if (input_dev->users) {
@@ -2773,7 +2776,7 @@ static const struct i2c_device_id mxt_id[] = {
 	{ }
 };
 MODULE_DEVICE_TABLE(i2c, mxt_id);
-#ifdef CONFIG_OF
+#ifdef OF_CONFIG
 static struct of_device_id mxt_match_table[] = {
 	{ .compatible = "atmel,mxt-ts",},
 	{ },

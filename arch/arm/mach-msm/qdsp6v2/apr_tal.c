@@ -29,7 +29,6 @@
 #include <mach/qdsp6v2/apr_tal.h>
 #include "linux/fih_hw_info.h"    //MTD-BSP-LC-Get_Version-00 +
 
-
 static char *svc_names[APR_DEST_MAX][APR_CLIENT_MAX] = {
 	{
 		"apr_audio_svc",

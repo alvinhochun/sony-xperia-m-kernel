@@ -65,7 +65,7 @@ struct wake_lock {
 #endif
 };
 
-//MTD-kernel-BH-PMSWakelockInfo-00+[
+//CORE-SC-PMSWakelockInfo-00+[
 #ifdef CONFIG_FIH_DUMP_WAKELOCK
 struct pms_wake_lock {
 	struct list_head	link;
@@ -78,7 +78,7 @@ struct pms_wake_lock {
  void add_pms_wakelock_info(char *pid, char *cmdline, char * tag);
  void remove_pms_wakelock_info(char *pid, char * tag);
  #endif
-//MTD-kernel-BH-PMSWakelockInfo-00+]
+//CORE-SC-PMSWakelockInfo-00+]
 
 #ifdef CONFIG_HAS_WAKELOCK
 

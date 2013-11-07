@@ -3,7 +3,7 @@
  * FIH Project
  *
  * General Description
- *
+ * 
  * Linux kernel: Definitions of SW related information for all project.
  *
  */
@@ -12,10 +12,6 @@
 #define _LINUX_FIH_SW_INFO_H
 
 #include "fih_hw_info.h"
-/*
- * This file has definitions of SW related information for SEMC.
- * SMEC naming rule: $PartNumber_$SwRevision
- */
 
 //MTD-BSP-LC-SMEM-00 +[
 /*===========================================================================
@@ -23,15 +19,15 @@
 ===========================================================================*/
 struct smem_oem_info
 {
-    unsigned int hw_id;
-    char   amss_version[32];    //MTD-BSP-LC-Get_Version-00 +
-    char   nonHLOS_git_head[64];  //BSP-REXER-GIT-00+
-    unsigned int power_on_cause; //MTD-KERNEL-DL-POC-00
+  unsigned int hw_id;
+  char   amss_version[32];
+  char   nonHLOS_git_head[64];  //BSP-REXER-GIT-00+
+  unsigned int power_on_cause; //MTD-KERNEL-DL-POC-00
 };
 #define PROJECT_ID_SHIFT_MASK 0
 #define PHASE_ID_SHIFT_MASK 8
 #define BAND_ID_SHIFT_MASK 16
-#define SIM_ID_SHIFT_MASK 24
+#define SIM_ID_SHIFT_MASK 24  
 //MTD-BSP-LC-SMEM-00 +]
 
 //MTD-BSP-LC-Reserve_Memory-00 +[
@@ -41,6 +37,7 @@ struct smem_oem_info
 #define MTD_MEMORY_RESERVE_BASE 0x88100000
 #define MTD_MEMORY_RESERVE_SIZE 0x300000
 //MTD-BSP-LC-Reserve_Memory-00 +]
+
 
 #define MTD_RAM_CONSOLE_ADDR  MTD_MEMORY_RESERVE_BASE
 #define MTD_RAM_CONSOLE_SIZE  0x00100000
@@ -69,6 +66,7 @@ struct smem_oem_info
 #define MTD_PWR_ON_EVENT_HW_WD_RESET            0x00100000 // hardware watchdog reset
 #define MTD_PWR_ON_EVENT_SOFTWARE_RESET         0x00200000 // software reset //CORE-DL-AddPocForSwReset-00
 #define MTD_PWR_ON_EVENT_PWR_OFF_CHG_REBOOT     0x00400000 // power off charging reset system //CORE-DL-FixForcePowerOn-00
+#define MTD_PWR_ON_EVENT_RPM_WD_RESET           0x00800000 // rpm watchdog reset //CORE-DL-AddPocForRPM-00
 #define MTD_PWR_ON_EVENT_CLEAN_DATA             0x00000000 // data is clean
 //MTD-KERNEL-DL-PWRON_CAUSE-00 +]
 
@@ -80,19 +78,19 @@ struct smem_oem_info
 #define RAM_CONSOLE_SIZE 0x00020000/*128KB */
 
 /*0x88120000*/
-#define ALOG_RAM_CONSOLE_PHYS_MAIN (RAM_CONSOLE_PHYS + RAM_CONSOLE_SIZE)
+#define ALOG_RAM_CONSOLE_PHYS_MAIN (RAM_CONSOLE_PHYS + RAM_CONSOLE_SIZE) 
 #define ALOG_RAM_CONSOLE_SIZE_MAIN 0x00020000 /*128KB */
 
-/*0x88140000*/
+/*0x88140000*/	
 #define ALOG_RAM_CONSOLE_PHYS_RADIO (ALOG_RAM_CONSOLE_PHYS_MAIN +  ALOG_RAM_CONSOLE_SIZE_MAIN)
 #define ALOG_RAM_CONSOLE_SIZE_RADIO 0x00020000 /*128KB */
 
 /*0x88160000*/
-#define ALOG_RAM_CONSOLE_PHYS_EVENTS (ALOG_RAM_CONSOLE_PHYS_RADIO + ALOG_RAM_CONSOLE_SIZE_RADIO)
+#define ALOG_RAM_CONSOLE_PHYS_EVENTS (ALOG_RAM_CONSOLE_PHYS_RADIO + ALOG_RAM_CONSOLE_SIZE_RADIO) 
 #define ALOG_RAM_CONSOLE_SIZE_EVENTS 0x00020000 /*128KB */
 
 /*0x88180000*/
-#define ALOG_RAM_CONSOLE_PHYS_SYSTEM (ALOG_RAM_CONSOLE_PHYS_EVENTS + ALOG_RAM_CONSOLE_SIZE_EVENTS)
+#define ALOG_RAM_CONSOLE_PHYS_SYSTEM (ALOG_RAM_CONSOLE_PHYS_EVENTS + ALOG_RAM_CONSOLE_SIZE_EVENTS) 
 #define ALOG_RAM_CONSOLE_SIZE_SYSTEM 0x00020000 /*128KB */
 
 /*===========================================================================
@@ -101,6 +99,17 @@ struct smem_oem_info
 /*0x881A0000*/
 #define MTD_SUSPEND_LOG_BASE (ALOG_RAM_CONSOLE_PHYS_SYSTEM + ALOG_RAM_CONSOLE_SIZE_SYSTEM)
 #define MTD_SUSPEND_LOG_SIZE 0x00020000 /* 128KB */
+
+/*===========================================================================
+                        FIH RPM definition
+===========================================================================*/
+/*0x881C0000*/
+#define RPM_MSG_RAM_PHYS_ADDR (MTD_SUSPEND_LOG_BASE + MTD_SUSPEND_LOG_SIZE)
+#define RPM_MSG_RAM_SIZE      0x00006000 /*24KB */
+
+/*0x881C6000*/
+#define RPM_CODE_RAM_PHYS_ADDR (RPM_MSG_RAM_PHYS_ADDR + RPM_MSG_RAM_SIZE)
+#define RPM_CODE_RAM_SIZE      0x00024000 /*144KB */
 
 /*===========================================================================
                         FIH Other definition
@@ -125,10 +134,10 @@ struct fih_panic_ram_data{
   unsigned int				signature;
   unsigned int				length;
   char						data[1];
-} ;
+} ;  
 
 /*0x881FFDB0 RAM STORE_FATAL_ERROR_REASON*/
-#define DIAG_BUFFER_LEN          0xD0
+#define DIAG_BUFFER_LEN		0xD0
 #define STORE_FATAL_ERROR_REASON (PANIC_RAM_DATA_BEGIN - DIAG_BUFFER_LEN)
 
 //MTD-KERNEL-DL-PWRON_CAUSE-00 +[
@@ -150,3 +159,4 @@ struct fih_panic_ram_data{
 //MTD-KERNEL-DL-PWRON_CAUSE-00 +]
 
 #endif
+

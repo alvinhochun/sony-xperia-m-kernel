@@ -542,7 +542,6 @@ struct usb_gadget {
 	unsigned			a_alt_hnp_support:1;
 	unsigned			host_request:1;
 	unsigned			otg_srp_reqd:1;
-	unsigned			disable_disconnect:1;/*CONN-EH-WHQL-00+*/
 	const char			*name;
 	struct device			dev;
 	u8				usb_core_id;

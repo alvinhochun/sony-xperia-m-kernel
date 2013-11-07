@@ -1,4 +1,4 @@
-/* Copyright (c) 2011-2012, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2011-2013, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -30,10 +30,26 @@ static struct gpiomux_setting gsbi3_active_cfg = {
 	.pull = GPIOMUX_PULL_NONE,
 };
 
-static struct gpiomux_setting gsbi5 = {
-	.func = GPIOMUX_FUNC_1,
+/* MTD-BSP-VT-BSP3030_porting-00-[ */
+#if 0
+static struct gpiomux_setting gsbi9_active_cfg = {
+	.func = GPIOMUX_FUNC_2,
+	.drv = GPIOMUX_DRV_8MA,
+	.pull = GPIOMUX_PULL_DOWN,
+};
+
+static struct gpiomux_setting gsbi9_suspended_cfg = {
+	.func = GPIOMUX_FUNC_2,
 	.drv = GPIOMUX_DRV_2MA,
 	.pull = GPIOMUX_PULL_DOWN,
+};
+#endif
+/* MTD-BSP-VT-BSP3030_porting-00-[ */
+
+static struct gpiomux_setting gsbi5 = {
+	.func = GPIOMUX_FUNC_1,
+	.drv = GPIOMUX_DRV_8MA,
+	.pull = GPIOMUX_PULL_NONE,
 };
 
 static struct gpiomux_setting gsbi12 = {
@@ -41,6 +57,25 @@ static struct gpiomux_setting gsbi12 = {
 	.drv = GPIOMUX_DRV_8MA,
 	.pull = GPIOMUX_PULL_NONE,
 };
+
+/* MTD-BSP-VT-BSP3030_porting-00-[ */
+#if 0
+static struct gpiomux_setting external_vfr[] = {
+	/* Suspended state */
+	{
+		.func = GPIOMUX_FUNC_3,
+		.drv = GPIOMUX_DRV_2MA,
+		.pull = GPIOMUX_PULL_KEEPER,
+	},
+	/* Active state */
+	{
+		.func = GPIOMUX_FUNC_3,
+		.drv = GPIOMUX_DRV_2MA,
+		.pull = GPIOMUX_PULL_KEEPER,
+	},
+};
+#endif
+/* MTD-BSP-VT-BSP3030_porting-00-[ */
 
 static struct gpiomux_setting cdc_mclk = {
 	.func = GPIOMUX_FUNC_1,
@@ -55,15 +90,9 @@ static struct gpiomux_setting audio_mbhc = {
 };
 
 #if defined(CONFIG_KS8851) || defined(CONFIG_KS8851_MODULE)
-static struct gpiomux_setting gpio_eth_suspend_1_cfg = {
-	.pull = GPIOMUX_PULL_DOWN,
-	.drv = GPIOMUX_DRV_2MA,
-	.func = GPIOMUX_FUNC_GPIO,
-};
-
-static struct gpiomux_setting gpio_eth_suspend_2_cfg = {
+static struct gpiomux_setting gpio_eth_config = {
 	.pull = GPIOMUX_PULL_NONE,
-	.drv = GPIOMUX_DRV_2MA,
+	.drv = GPIOMUX_DRV_8MA,
 	.func = GPIOMUX_FUNC_GPIO,
 };
 #endif
@@ -190,15 +219,15 @@ static struct gpiomux_setting hdmi_active_5_cfg = {
 #if defined(CONFIG_KS8851) || defined(CONFIG_KS8851_MODULE)
 static struct msm_gpiomux_config msm8960_ethernet_configs[] = {
 	{
-		.gpio = 89,
+		.gpio = 90,
 		.settings = {
-			[GPIOMUX_SUSPENDED] = &gpio_eth_suspend_1_cfg,
+			[GPIOMUX_SUSPENDED] = &gpio_eth_config,
 		}
 	},
 	{
-		.gpio = 90,
+		.gpio = 89,
 		.settings = {
-			[GPIOMUX_SUSPENDED] = &gpio_eth_suspend_2_cfg,
+			[GPIOMUX_SUSPENDED] = &gpio_eth_config,
 		}
 	},
 };
@@ -244,6 +273,81 @@ static struct msm_gpiomux_config msm8960_gsbi_configs[] __initdata = {
 		},
 	},
 };
+
+/* MTD-BSP-VT-BSP3030_porting-00-[ */
+#if 0
+static struct msm_gpiomux_config msm8930_sglte_gsbi_configs[] __initdata = {
+	/* Add the I2C/SPI GPIOs Here */
+	{
+		.gpio      = 6,		/* GSBI1 TX */
+		.settings = {
+			[GPIOMUX_SUSPENDED] = &spi_suspended_config,
+			[GPIOMUX_ACTIVE] = &spi_active,
+		},
+	},
+	{
+		.gpio      = 7,		/* GSBI1 RX */
+		.settings = {
+			[GPIOMUX_SUSPENDED] = &spi_suspended_config,
+			[GPIOMUX_ACTIVE] = &spi_active,
+		},
+	},
+	{
+		.gpio      = 8,		/* GSBI1 CTS_N */
+		.settings = {
+			[GPIOMUX_SUSPENDED] = &spi_suspended_config,
+			[GPIOMUX_ACTIVE] = &spi_active,
+		},
+	},
+	{
+		.gpio      = 9,		/* GSBI1 RFR_N */
+		.settings = {
+			[GPIOMUX_SUSPENDED] = &spi_suspended_config,
+			[GPIOMUX_ACTIVE] = &spi_active,
+		},
+	},
+	{
+		.gpio      = 16,	/* GSBI3 I2C QUP SDA */
+		.settings = {
+			[GPIOMUX_SUSPENDED] = &gsbi3_suspended_cfg,
+			[GPIOMUX_ACTIVE] = &gsbi3_active_cfg,
+		},
+	},
+	{
+		.gpio      = 17,	/* GSBI3 I2C QUP SCL */
+		.settings = {
+			[GPIOMUX_SUSPENDED] = &gsbi3_suspended_cfg,
+			[GPIOMUX_ACTIVE] = &gsbi3_active_cfg,
+		},
+	},
+	{
+		.gpio      = 44,	/* GSBI12 I2C QUP SDA */
+		.settings = {
+			[GPIOMUX_SUSPENDED] = &gsbi12,
+		},
+	},
+	{
+		.gpio      = 45,	/* GSBI12 I2C QUP SCL */
+		.settings = {
+			[GPIOMUX_SUSPENDED] = &gsbi12,
+		},
+	},
+	{
+		.gpio      = 73,	/* GSBI10 I2C QUP SDA */
+		.settings = {
+			[GPIOMUX_SUSPENDED] = &gsbi10,
+		},
+	},
+	{
+		.gpio      = 74,	/* GSBI10 I2C QUP SCL */
+		.settings = {
+			[GPIOMUX_SUSPENDED] = &gsbi10,
+		},
+	},
+
+};
+#endif
+/* MTD-BSP-VT-BSP3030_porting-00-] */
 
 static struct msm_gpiomux_config msm8960_slimbus_config[] __initdata = {
 	{
@@ -454,6 +558,13 @@ int __init msm8930_init_gpiomux(void)
 		return rc;
 	}
 
+/* MTD-BSP-VT-BSP3030_porting-00-[ */
+#if 0
+	if (socinfo_get_platform_subtype() == PLATFORM_SUBTYPE_SGLTE)
+		return sglte8930_init_gpiomux();
+#endif
+/* MTD-BSP-VT-BSP3030_porting-00-] */
+
 #if defined(CONFIG_KS8851) || defined(CONFIG_KS8851_MODULE)
 	msm_gpiomux_install(msm8960_ethernet_configs,
 			ARRAY_SIZE(msm8960_ethernet_configs));
@@ -489,7 +600,7 @@ int __init msm8930_init_gpiomux(void)
 #ifdef CONFIG_FB_MSM_HDMI_MSM_PANEL
 	msm_gpiomux_install(msm8960_hdmi_configs,
 			ARRAY_SIZE(msm8960_hdmi_configs));
-	if (msm8930_mhl_display_enabled())
+	if (machine_is_msm8930_fluid())
 		msm_gpiomux_install(msm8930_mhl_configs,
 				ARRAY_SIZE(msm8930_mhl_configs));
 #endif

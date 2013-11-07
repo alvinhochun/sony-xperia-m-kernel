@@ -61,8 +61,7 @@ static void vsg_set_last_buffer(struct vsg_context *context,
 	WFD_MSG_DBG("Setting last buffer to paddr %p\n",
 			(void *)buf->mdp_buf_info.paddr);
 }
-/* MM-VH-WFD-11*[ */
-#ifndef CONFIG_WFD_MERGE_ENCODE_WORK
+
 static void vsg_encode_helper_func(struct work_struct *task)
 {
 	struct vsg_encode_work *work =
@@ -80,14 +79,12 @@ static void vsg_encode_helper_func(struct work_struct *task)
 	}
 	kfree(work);
 }
-#endif
+
 static void vsg_work_func(struct work_struct *task)
 {
 	struct vsg_work *work =
 		container_of(task, struct vsg_work, work);
-#ifndef CONFIG_WFD_MERGE_ENCODE_WORK
 	struct vsg_encode_work *encode_work;
-#endif
 	struct vsg_context *context = work->context;
 	struct vsg_buf_info *buf_info = NULL, *temp = NULL;
 	int rc = 0, count = 0;
@@ -132,7 +129,7 @@ static void vsg_work_func(struct work_struct *task)
 			&buf_info->mdp_buf_info)) {
 		context->last_buffer->flags |= VSG_NEVER_RELEASE;
 	}
-#ifndef CONFIG_WFD_MERGE_ENCODE_WORK
+
 	encode_work = kmalloc(sizeof(*encode_work), GFP_KERNEL);
 	encode_work->buf = buf_info;
 	encode_work->context = context;
@@ -144,7 +141,7 @@ static void vsg_work_func(struct work_struct *task)
 		encode_work = NULL;
 		goto err_skip_encode;
 	}
-#endif
+
 	buf_info->flags |= VSG_BUF_BEING_ENCODED;
 	if (!(buf_info->flags & VSG_NEVER_SET_LAST_BUFFER)) {
 		if (context->last_buffer) {
@@ -168,20 +165,10 @@ static void vsg_work_func(struct work_struct *task)
 	}
 
 	list_add_tail(&buf_info->node, &context->busy_queue.node);
-
-#ifdef CONFIG_WFD_MERGE_ENCODE_WORK
-	rc = vsg_encode_frame(context, buf_info);
-	if (rc < 0) {
-		context->state = VSG_STATE_ERROR;
-		WFD_MSG_ERR("vsg_encode_frame failed\n");
-	}
-#endif
-
 err_skip_encode:
 	mutex_unlock(&context->mutex);
 	kfree(work);
 }
-/* MM-VH-WFD-11*] */
 
 static void vsg_timer_helper_func(struct work_struct *task)
 {

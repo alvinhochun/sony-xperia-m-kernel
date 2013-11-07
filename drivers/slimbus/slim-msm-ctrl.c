@@ -1,5 +1,4 @@
 /* Copyright (c) 2011-2012, The Linux Foundation. All rights reserved.
- * Copyright (c) 2013 Foxconn International Holdings, Ltd. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -26,7 +25,6 @@
 #include <linux/of.h>
 #include <linux/of_slimbus.h>
 #include <mach/sps.h>
-#include <mach/qdsp6v2/apr.h>
 
 /* Per spec.max 40 bytes per received message */
 #define SLIM_RX_MSGQ_BUF_LEN	40
@@ -536,6 +534,17 @@ static irqreturn_t msm_slim_interrupt(int irq, void *d)
 			 */
 			mb();
 			complete(&dev->rx_msgq_notify);
+		} else if (mt == SLIM_MSG_MT_CORE &&
+			mc == SLIM_MSG_MC_REPORT_ABSENT) {
+			writel_relaxed(MGR_INT_RX_MSG_RCVD, dev->base +
+						MGR_INT_CLR);
+			/*
+			 * Guarantee that CLR bit write goes through
+			 * before signalling completion
+			 */
+			mb();
+			complete(&dev->rx_msgq_notify);
+
 		} else if (mc == SLIM_MSG_MC_REPLY_INFORMATION ||
 				mc == SLIM_MSG_MC_REPLY_VALUE) {
 			msm_slim_rx_enqueue(dev, rx_buf, len);
@@ -923,19 +932,15 @@ static int msm_xfer_msg(struct slim_controller *ctrl, struct slim_msg_txn *txn)
 			}
 		}
 	}
-	/*MM-RC-NickiSS-00960-NickiSS-01138+[*/
-	if (mc == SLIM_USR_MC_GENERIC_ACK) {
-		u32 mgrstat = readl_relaxed(dev->base + MGR_STATUS);
-		pr_err("generic ack:0x %x, mgrstat:0x%x", pbuf[0], mgrstat);
+	if (!timeout) {
+		dev_err(dev->dev, "TX timed out:MC:0x%x,mt:0x%x",
+				txn->mc, txn->mt);
+		dev->wr_comp = NULL;
 	}
-	/*MM-RC-NickiSS-00960-NickiSS-01138+]*/
+
 	mutex_unlock(&dev->tx_lock);
 	if (msgv >= 0)
 		msm_slim_put_ctrl(dev);
-
-	if (!timeout)
-		dev_err(dev->dev, "TX timed out:MC:0x%x,mt:0x%x", txn->mc,
-					txn->mt);
 
 	return timeout ? dev->err : -ETIMEDOUT;
 }
@@ -1101,8 +1106,6 @@ static int msm_sat_define_ch(struct msm_slim_sat *sat, u8 *buf, u8 len, u8 mc)
 		/* part of grp. activating/removing 1 will take care of rest */
 		ret = slim_control_ch(&sat->satcl, sat->satch[i].chanh, oper,
 					false);
-		pr_err("SAT oper:%d grp start:%d, ret:%d", oper,
-				sat->satch[i].chan, ret);/*MM-RC-NickiSS-00960-NickiSS-01138+*/
 		if (!ret) {
 			for (i = 5; i < len; i++) {
 				int j;
@@ -1186,12 +1189,10 @@ static int msm_sat_define_ch(struct msm_slim_sat *sat, u8 *buf, u8 len, u8 mc)
 			*grph = chh[0];
 
 		/* part of group so activating 1 will take care of rest */
-		if (mc == SLIM_USR_MC_DEF_ACT_CHAN) {
+		if (mc == SLIM_USR_MC_DEF_ACT_CHAN)
 			ret = slim_control_ch(&sat->satcl,
 					chh[0],
 					SLIM_CH_ACTIVATE, false);
-								pr_err("SAT activate grp start: ret:%d", ret);/*MM-RC-NickiSS-00960-NickiSS-01138+*/
-		}
 	}
 	return ret;
 }
@@ -1212,7 +1213,8 @@ static void msm_slim_rxwq(struct msm_slim_ctrl *dev)
 			for (i = 0; i < 6; i++)
 				e_addr[i] = buf[7-i];
 
-			ret = slim_assign_laddr(&dev->ctrl, e_addr, 6, &laddr);
+			ret = slim_assign_laddr(&dev->ctrl, e_addr, 6, &laddr,
+						false);
 			/* Is this Qualcomm ported generic device? */
 			if (!ret && e_addr[5] == QC_MFGID_LSB &&
 				e_addr[4] == QC_MFGID_MSB &&
@@ -1309,8 +1311,6 @@ static void slim_sat_rxprocess(struct work_struct *work)
 			 * when this is detected
 			 */
 			if (sat->sent_capability) {
-				pr_err("Received report present from SAT:0x%x",
-						sat->satcl.laddr);/*MM-RC-NickiSS-00960-NickiSS-01138+*/
 				for (i = 0; i < sat->nsatch; i++) {
 					if (sat->satch[i].reconf) {
 						pr_err("SSR, sat:%d, rm ch:%d",
@@ -1395,7 +1395,7 @@ send_capability:
 			txn.rl = 12;
 			txn.len = 8;
 			txn.wbuf = wbuf;
-			ret = msm_xfer_msg(&dev->ctrl, &txn);  /* MM-NC-CoverityCID75949-00 */
+			msm_xfer_msg(&dev->ctrl, &txn);
 			break;
 		case SLIM_USR_MC_DEFINE_CHAN:
 		case SLIM_USR_MC_DEF_ACT_CHAN:
@@ -1420,7 +1420,6 @@ send_capability:
 		case SLIM_USR_MC_RECONFIG_NOW:
 			tid = buf[3];
 			gen_ack = true;
-			pr_err("SAT:LA:%x reconf req", sat->satcl.laddr);/*MM-RC-NickiSS-00960-NickiSS-01138+*/
 			ret = slim_reconfigure_now(&sat->satcl);
 			for (i = 0; i < sat->nsatch; i++) {
 				struct msm_sat_chan *sch = &sat->satch[i];
@@ -1468,8 +1467,6 @@ send_capability:
 			txn.len = 2;
 			txn.wbuf = wbuf;
 			gen_ack = true;
-			pr_err("SAT connect MC:0x%x,LA:0x%x", txn.mc,
-					sat->satcl.laddr);/*MM-RC-NickiSS-00960-NickiSS-01138+*/
 			ret = msm_xfer_msg(&dev->ctrl, &txn);
 			break;
 		case SLIM_USR_MC_DISCONNECT_PORT:
@@ -1482,8 +1479,11 @@ send_capability:
 			txn.mt = SLIM_MSG_MT_CORE;
 			txn.wbuf = wbuf;
 			gen_ack = true;
-			pr_err("SAT disconnect LA:0x%x", sat->satcl.laddr);/*MM-RC-NickiSS-00960-NickiSS-01138+*/
 			ret = msm_xfer_msg(&dev->ctrl, &txn);
+			break;
+		case SLIM_MSG_MC_REPORT_ABSENT:
+			dev_info(dev->dev, "Received Report Absent Message\n");
+			break;
 		default:
 			break;
 		}
@@ -1496,25 +1496,15 @@ send_capability:
 		wbuf[0] = tid;
 		if (!ret)
 			wbuf[1] = MSM_SAT_SUCCSS;
-		else {
-			pr_err("sat cmd:0x%x no ack:%d", mc, ret);/*MM-RC-NickiSS-00960-NickiSS-01138+*/
+		else
 			wbuf[1] = 0;
-		}
 		txn.mc = SLIM_USR_MC_GENERIC_ACK;
 		txn.la = sat->satcl.laddr;
 		txn.rl = 6;
 		txn.len = 2;
 		txn.wbuf = wbuf;
 		txn.mt = SLIM_MSG_MT_SRC_REFERRED_USER;
-		/*MM-RC-NickiSS-00960-NickiSS-01138*[*/
-		ret = msm_xfer_msg(&dev->ctrl, &txn);
-		if (ret) {
-			pr_err("sending ACK failed:%d", ret);
-			pr_err("clk gear:%d, subfrm mode:0x%x",
-				dev->ctrl.clkgear, dev->ctrl.sched.subfrmcode);
-			ret = 0;
-		}
-		/*MM-RC-NickiSS-00960-NickiSS-01138*]*/
+		msm_xfer_msg(&dev->ctrl, &txn);
 		if (satv >= 0)
 			msm_slim_put_ctrl(dev);
 	}
@@ -1695,7 +1685,8 @@ static int msm_slim_rx_msgq_thread(void *data)
 				laddr = (u8)((buffer[0] >> 16) & 0xff);
 				sat = addr_to_sat(dev, laddr);
 			}
-		} else if ((index * 4) >= msg_len) {
+		}
+		if ((index * 4) >= msg_len) {
 			index = 0;
 			if (sat) {
 				msm_sat_enqueue(sat, buffer, msg_len);
@@ -1962,20 +1953,10 @@ static int __devinit msm_slim_probe(struct platform_device *pdev)
 {
 	struct msm_slim_ctrl *dev;
 	int ret;
-	enum apr_subsys_state q6_state;
 	struct resource		*bam_mem, *bam_io;
 	struct resource		*slim_mem, *slim_io;
 	struct resource		*irq, *bam_irq;
 	bool			rxreg_access = false;
-
-	q6_state = apr_get_q6_state();
-	if (q6_state == APR_SUBSYS_DOWN) {
-		dev_dbg(&pdev->dev, "defering %s, adsp_state %d\n", __func__,
-			q6_state);
-		return -EPROBE_DEFER;
-	} else
-		dev_dbg(&pdev->dev, "adsp is ready\n");
-
 	slim_mem = platform_get_resource_byname(pdev, IORESOURCE_MEM,
 						"slimbus_physical");
 	if (!slim_mem) {
@@ -2201,10 +2182,6 @@ static int __devinit msm_slim_probe(struct platform_device *pdev)
 	 * function
 	 */
 	mb();
-
-	/* Add devices registered with board-info now that controller is up */
-	slim_ctrl_add_boarddevs(&dev->ctrl);
-
 	if (pdev->dev.of_node)
 		of_register_slim_devices(&dev->ctrl);
 

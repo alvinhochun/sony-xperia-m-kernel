@@ -49,10 +49,8 @@
 #define CONTROL_INT_ISR_REPORT        0x00
 #define CONTROL_ALS                   0x01
 #define CONTROL_PS                    0x02
+
 static int record_init_fail = 0;
-/*PERI-AC-Zero_Lux-Checking-00+{*/
-static int clearcount=0;
-/*PERI-AC-Zero_Lux-Checking-00+}*/
 //static void sensor_irq_do_work(struct work_struct *work);
 //static DECLARE_WORK(sensor_irq_work, sensor_irq_do_work);
 
@@ -286,25 +284,19 @@ static int get_ls_adc_value(uint16_t *als_step, bool resume)
 		lpi->top_tresh=(*als_step)+50;
 
 /*PERI-AC-Zero_Lux-Checking-00+{*/
-	if((*als_step-50) < 0)
-	{
-		if(clearcount==0)
-		{
-			lpi->bottom_tresh=3;
-			clearcount++;
-		}
-		else
-		{
-			lpi->bottom_tresh=0;
-		}
-	}
-	else
-	{
-		clearcount=0;
-		lpi->bottom_tresh=(*als_step)-50;
-	}
+    if((*als_step-50) < 0)
+    {
+        if(*als_step < 3)
+            lpi->bottom_tresh=0;
+        else
+            lpi->bottom_tresh=3;
+    }
+    else
+    {
+        lpi->bottom_tresh=(*als_step)-50;
+    }
 /*PERI-AC-Zero_Lux-Checking-00+}*/
-    
+
 /*MTD-PERIPHERAL-CH-PS_conf00++[*/
 #ifdef LS_cal
 	if(lpi->k_data.done_LS)
@@ -977,7 +969,7 @@ static ssize_t ps_thd_store(struct device *dev,
 	module_id = simple_strtol(token[1], NULL, 16);
 	code = simple_strtol(token[2], NULL, 16);
 
-	if(((fih_get_product_phase() == PHASE_PQ) && (module_id==2))|| (fih_get_product_phase() >= PHASE_MP) || force)
+	if(((fih_get_product_phase() == PHASE_PQ) && (module_id==2))|| (fih_get_product_phase() >= PHASE_TP2_MP) || force)
 	{
     	D("[PS]%s: store value = 0x%x\n", __func__, code);
     
@@ -1580,7 +1572,7 @@ static int cm36283_probe(struct i2c_client *client,
     lpi->slave_addr = pdata->slave_addr;
 
 /*MTD-PERIPHERAL-CH-PS_conf00++[*/
-if(fih_get_product_phase() >= PHASE_MP)
+if(fih_get_product_phase() >= PHASE_TP2_MP)
 {
 	lpi->ps_away_thd_set = 0x2D;
     lpi->ps_close_thd_set = 0x31;	

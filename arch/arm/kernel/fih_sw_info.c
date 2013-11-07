@@ -98,9 +98,8 @@ hw_id_number_name_map hw_id_map_table[] =
 	ID2NAME(PHASE_PreAP, "PreAP"),
 	ID2NAME(PHASE_AP, "AP"),
 	ID2NAME(PHASE_TP, "TP"),
-	ID2NAME(PHASE_TP, "TP2"),
 	ID2NAME(PHASE_PQ, "PQ"),
-	ID2NAME(PHASE_MP, "MP"),
+	ID2NAME(PHASE_TP2_MP, "TP2_MP"),
 	ID2NAME(PHASE_MAX, "unknown hw id")
 };
 
@@ -278,7 +277,7 @@ static ssize_t fih_hw_id_version_name_show(struct kobject *kobj, struct kobj_att
 {
 	char *s = buf;
 	unsigned int hw_id;
-	unsigned int i;  /* KERNEL-HC-Fix_Coverity-00* */
+	unsigned int i;
 	
 	hw_id = fih_get_product_phase();
 
@@ -496,7 +495,7 @@ static ssize_t fih_modem_crash_info_show(struct kobject *kobj, struct kobj_attri
 			strncat(err_init_string, fatal_error_buffer_virt_addr, DIAG_BUFFER_LEN-19);
 			strlcpy(buf, err_init_string, DIAG_BUFFER_LEN);
 			ret = strlen(buf);
-		} else if (power_on_cause & MTD_PWR_ON_EVENT_MODEM_SW_WD_RESET) {
+		} else if (power_on_cause & MTD_PWR_ON_EVENT_MODEM_FW_WD_RESET) {
 			strncat(err_init_string, err_fwd_init_string, 19);
 			strncat(err_init_string, fatal_error_buffer_virt_addr, DIAG_BUFFER_LEN-19);
 			strlcpy(buf, err_init_string, DIAG_BUFFER_LEN);

@@ -26,7 +26,7 @@
 #define SAMPLE_RATE 44100
 #define FRAMES_PER_MSEC (SAMPLE_RATE / 1000)
 
-#define IN_EP_MAX_PACKET_SIZE	256
+#define IN_EP_MAX_PACKET_SIZE 256
 
 /* Number of requests to allocate */
 #define IN_EP_REQ_COUNT 4
@@ -36,7 +36,7 @@
 #define AUDIO_NUM_INTERFACES	2
 
 /* B.3.1  Standard AC Interface Descriptor */
-static struct usb_interface_descriptor audio_source_ac_interface_desc = {
+static struct usb_interface_descriptor ac_interface_desc = {
 	.bLength =		USB_DT_INTERFACE_SIZE,
 	.bDescriptorType =	USB_DT_INTERFACE,
 	.bNumEndpoints =	0,
@@ -44,6 +44,7 @@ static struct usb_interface_descriptor audio_source_ac_interface_desc = {
 	.bInterfaceSubClass =	USB_SUBCLASS_AUDIOCONTROL,
 };
 
+DECLARE_UAC_AC_HEADER_DESCRIPTOR(2);
 
 #define UAC_DT_AC_HEADER_LENGTH	UAC_DT_AC_HEADER_SIZE(AUDIO_NUM_INTERFACES)
 /* 1 input terminal, 1 output terminal and 1 feature unit */
@@ -51,7 +52,7 @@ static struct usb_interface_descriptor audio_source_ac_interface_desc = {
 	+ UAC_DT_INPUT_TERMINAL_SIZE + UAC_DT_OUTPUT_TERMINAL_SIZE \
 	+ UAC_DT_FEATURE_UNIT_SIZE(0))
 /* B.3.2  Class-Specific AC Interface Descriptor */
-static struct uac1_ac_header_descriptor_2 audio_source_ac_header_desc = {
+static struct uac1_ac_header_descriptor_2 ac_header_desc = {
 	.bLength =		UAC_DT_AC_HEADER_LENGTH,
 	.bDescriptorType =	USB_DT_CS_INTERFACE,
 	.bDescriptorSubtype =	UAC_HEADER,
@@ -127,6 +128,8 @@ static struct uac1_as_header_descriptor as_header_desc = {
 	.wFormatTag =		UAC_FORMAT_TYPE_I_PCM,
 };
 
+DECLARE_UAC_FORMAT_TYPE_I_DISCRETE_DESC(1);
+
 static struct uac_format_type_i_discrete_descriptor_1 as_type_i_desc = {
 	.bLength =		UAC_FORMAT_TYPE_I_DISCRETE_DESC_SIZE(1),
 	.bDescriptorType =	USB_DT_CS_INTERFACE,
@@ -170,8 +173,8 @@ static struct uac_iso_endpoint_descriptor as_iso_in_desc = {
 };
 
 static struct usb_descriptor_header *hs_audio_desc[] = {
-	(struct usb_descriptor_header *)&audio_source_ac_interface_desc,
-	(struct usb_descriptor_header *)&audio_source_ac_header_desc,
+	(struct usb_descriptor_header *)&ac_interface_desc,
+	(struct usb_descriptor_header *)&ac_header_desc,
 
 	(struct usb_descriptor_header *)&input_terminal_desc,
 	(struct usb_descriptor_header *)&output_terminal_desc,
@@ -189,8 +192,8 @@ static struct usb_descriptor_header *hs_audio_desc[] = {
 };
 
 static struct usb_descriptor_header *fs_audio_desc[] = {
-	(struct usb_descriptor_header *)&audio_source_ac_interface_desc,
-	(struct usb_descriptor_header *)&audio_source_ac_header_desc,
+	(struct usb_descriptor_header *)&ac_interface_desc,
+	(struct usb_descriptor_header *)&ac_header_desc,
 
 	(struct usb_descriptor_header *)&input_terminal_desc,
 	(struct usb_descriptor_header *)&output_terminal_desc,
@@ -260,7 +263,7 @@ struct audio_dev {
 	s64				frames_sent;
 };
 
-static inline struct audio_dev *func_to_audio_source(struct usb_function *f)
+static inline struct audio_dev *func_to_audio(struct usb_function *f)
 {
 	return container_of(f, struct audio_dev, func);
 }
@@ -421,7 +424,7 @@ static void audio_data_complete(struct usb_ep *ep, struct usb_request *req)
 	audio_send(audio);
 }
 
-static int audio_source_set_endpoint_req(struct usb_function *f,
+static int audio_set_endpoint_req(struct usb_function *f,
 		const struct usb_ctrlrequest *ctrl)
 {
 	int value = -EOPNOTSUPP;
@@ -446,7 +449,7 @@ static int audio_source_set_endpoint_req(struct usb_function *f,
 	return value;
 }
 
-static int audio_source_get_endpoint_req(struct usb_function *f,
+static int audio_get_endpoint_req(struct usb_function *f,
 		const struct usb_ctrlrequest *ctrl)
 {
 	struct usb_composite_dev *cdev = f->config->cdev;
@@ -494,11 +497,11 @@ audio_setup(struct usb_function *f, const struct usb_ctrlrequest *ctrl)
 	 */
 	switch (ctrl->bRequestType) {
 	case USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_ENDPOINT:
-		value = audio_source_set_endpoint_req(f, ctrl);
+		value = audio_set_endpoint_req(f, ctrl);
 		break;
 
 	case USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_ENDPOINT:
-		value = audio_source_get_endpoint_req(f, ctrl);
+		value = audio_get_endpoint_req(f, ctrl);
 		break;
 	}
 
@@ -521,7 +524,7 @@ audio_setup(struct usb_function *f, const struct usb_ctrlrequest *ctrl)
 
 static int audio_set_alt(struct usb_function *f, unsigned intf, unsigned alt)
 {
-	struct audio_dev *audio = func_to_audio_source(f);
+	struct audio_dev *audio = func_to_audio(f);
 	struct usb_composite_dev *cdev = f->config->cdev;
 	int ret;
 
@@ -545,7 +548,7 @@ static int audio_set_alt(struct usb_function *f, unsigned intf, unsigned alt)
 
 static void audio_disable(struct usb_function *f)
 {
-	struct audio_dev *audio = func_to_audio_source(f);
+	struct audio_dev	*audio = func_to_audio(f);
 
 	pr_debug("audio_disable\n");
 	usb_ep_disable(audio->in_ep);
@@ -573,7 +576,7 @@ static int
 audio_bind(struct usb_configuration *c, struct usb_function *f)
 {
 	struct usb_composite_dev *cdev = c->cdev;
-	struct audio_dev *audio = func_to_audio_source(f);
+	struct audio_dev *audio = func_to_audio(f);
 	int status;
 	struct usb_ep *ep;
 	struct usb_request *req;
@@ -585,7 +588,7 @@ audio_bind(struct usb_configuration *c, struct usb_function *f)
 	status = usb_interface_id(c, f);
 	if (status < 0)
 		goto fail;
-	audio_source_ac_interface_desc.bInterfaceNumber = status;
+	ac_interface_desc.bInterfaceNumber = status;
 
 	status = usb_interface_id(c, f);
 	if (status < 0)
@@ -623,7 +626,7 @@ fail:
 static void
 audio_unbind(struct usb_configuration *c, struct usb_function *f)
 {
-	struct audio_dev *audio = func_to_audio_source(f);
+	struct audio_dev *audio = func_to_audio(f);
 	struct usb_request *req;
 
 	while ((req = audio_req_get(audio)))

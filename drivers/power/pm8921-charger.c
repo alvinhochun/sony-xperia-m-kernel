@@ -163,6 +163,7 @@ do {\
 #define CHG_COMP_OVR		0x20A
 #define IUSB_FINE_RES		0x2B6
 #define OVP_USB_UVD		0x2B7
+#define PM8921_USB_TRIM_SEL	0x339
 
 /* Since interrupt mode doesn't support alien battery,
   * we use polling mode instead, until Qualcomm giving
@@ -491,7 +492,7 @@ struct pm8921_chg_chip {
 	bool				iusb_fine_res;
 	bool				disable_hw_clock_switching;
 	DECLARE_BITMAP(enabled_irqs, PM_CHG_MAX_INTS);
-	struct work_struct		battery_id_valid_work;
+	struct work_struct		battery_present_work;
 	int64_t				batt_id_min;
 	int64_t				batt_id_max;
 	int				soc[SOC_MAX_NUM];
@@ -1004,6 +1005,44 @@ struct usb_ma_limit_entry {
 };
 
 /* USB Trim tables */
+static int usb_trim_pm8921_table_1[USB_TRIM_ENTRIES] = {
+	0x0,
+	0x0,
+	-0x5,
+	0x0,
+	-0x7,
+	0x0,
+	-0x9,
+	-0xA,
+	0x0,
+	0x0,
+	-0xE,
+	0x0,
+	-0xF,
+	0x0,
+	-0x10,
+	0x0
+};
+
+static int usb_trim_pm8921_table_2[USB_TRIM_ENTRIES] = {
+	0x0,
+	0x0,
+	-0x2,
+	0x0,
+	-0x4,
+	0x0,
+	-0x4,
+	-0x5,
+	0x0,
+	0x0,
+	-0x6,
+	0x0,
+	-0x6,
+	0x0,
+	-0x6,
+	0x0
+};
+
 static int usb_trim_8038_table[USB_TRIM_ENTRIES] = {
 	0x0,
 	0x0,
@@ -1068,6 +1107,10 @@ static struct usb_ma_limit_entry usb_ma_table[] = {
 #define USB_OVP_TRIM_MIN	0x00
 #define REG_USB_OVP_TRIM_ORIG_LSB	0x10A
 #define REG_USB_OVP_TRIM_ORIG_MSB	0x09C
+#define REG_USB_OVP_TRIM_PM8917		0x2B5
+#define REG_USB_OVP_TRIM_PM8917_BIT	BIT(0)
+#define USB_TRIM_MAX_DATA_PM8917	0x3F
+#define USB_TRIM_POLARITY_PM8917_BIT	BIT(6)
 static int pm_chg_usb_trim(struct pm8921_chg_chip *chip, int index)
 {
 	u8 temp, sbi_config, msb, lsb;
@@ -1456,12 +1499,23 @@ static void check_battery_valid(struct pm8921_chg_chip *chip)
 	}
 }
 
-static void battery_id_valid(struct work_struct *work)
+extern void pm8921_bms_battery_removed(void);
+extern void machine_power_off(void);
+
+static void battery_present(struct work_struct *work)
 {
 	struct pm8921_chg_chip *chip = container_of(work,
-				struct pm8921_chg_chip, battery_id_valid_work);
+				struct pm8921_chg_chip, battery_present_work);
+	int status;
 
-	check_battery_valid(chip);
+	status = pm_chg_get_rt_status(chip, BATT_REMOVED_IRQ);
+
+	pr_err("batt_present = %d\n", !status);
+	
+	if (status == 1) {
+		pm8921_bms_battery_removed();
+		machine_power_off();
+	}
 }
 
 static void pm8921_chg_enable_irq(struct pm8921_chg_chip *chip, int interrupt)
@@ -2697,8 +2751,8 @@ static void handle_usb_insertion_removal(struct pm8921_chg_chip *chip, const cha
 
 			spin_lock_irqsave(&sony_alg_lock, flags);
 
-			/* Hold another wake lock to buy one second for notifying LED driver */
-			wake_lock_timeout(&msm_battery_wakelock, HZ); //CORE-DL-FixLedKeepLightOn-00
+			/* Hold another wake lock to buy three seconds for notifying LED driver */
+			wake_lock_timeout(&msm_battery_wakelock, 3*HZ); /* MTD-CORE-EL-FixLedKeepLightOn-01* */
 
 			if (!chip->power_off_charging_mode)
 				if (wake_lock_active(&chip->msm_battery_ac_wakelock))
@@ -3035,14 +3089,7 @@ static irqreturn_t usbin_valid_irq_handler(int irq, void *data)
 
 static irqreturn_t batt_inserted_irq_handler(int irq, void *data)
 {
-	struct pm8921_chg_chip *chip = data;
-	int status;
-
-	status = pm_chg_get_rt_status(chip, BATT_INSERTED_IRQ);
-	schedule_work(&chip->battery_id_valid_work);
-	handle_start_ext_chg(chip);
-	pr_track("battery present=%d", status);
-	power_supply_changed(&chip->batt_psy);
+	/* this function is not in used */
 	return IRQ_HANDLED;
 }
 
@@ -3420,6 +3467,8 @@ static irqreturn_t batt_removed_irq_handler(int irq, void *data)
 	struct pm8921_chg_chip *chip = data;
 	int status;
 
+	schedule_work(&chip->battery_present_work);
+	
 	status = pm_chg_get_rt_status(chip, BATT_REMOVED_IRQ);
 	pr_track("battery present=%d state=%d", !status,
 					 pm_chg_get_fsm_state(data));
@@ -4234,12 +4283,15 @@ static void free_irqs(struct pm8921_chg_chip *chip)
 		}
 }
 
+#define PM8921_USB_TRIM_SEL_BIT		BIT(6)
 /* determines the initial present states */
 static void __devinit determine_initial_state(struct pm8921_chg_chip *chip)
 {
 	unsigned long flags;
 	int fsm_state;
 	int is_fast_chg;
+	int rc = 0;
+	u8 trim_sel_reg = 0, regsbi;
 
 	chip->dc_present = !!is_dc_chg_plugged_in(chip);
 	chip->usb_present = !!is_usb_chg_plugged_in(chip);
@@ -4304,10 +4356,26 @@ static void __devinit determine_initial_state(struct pm8921_chg_chip *chip)
 			fsm_state);
 
 	/* Determine which USB trim column to use */
-	if (pm8xxx_get_version(chip->dev->parent) == PM8XXX_VERSION_8917)
+	if (pm8xxx_get_version(chip->dev->parent) == PM8XXX_VERSION_8917) {
 		chip->usb_trim_table = usb_trim_8917_table;
-	else if (pm8xxx_get_version(chip->dev->parent) == PM8XXX_VERSION_8038)
+	} else if (pm8xxx_get_version(chip->dev->parent) ==
+						PM8XXX_VERSION_8038) {
 		chip->usb_trim_table = usb_trim_8038_table;
+	} else if (pm8xxx_get_version(chip->dev->parent) ==
+						PM8XXX_VERSION_8921) {
+		rc = pm8xxx_readb(chip->dev->parent, REG_SBI_CONFIG, &regsbi);
+		rc |= pm8xxx_writeb(chip->dev->parent, REG_SBI_CONFIG, 0x5E);
+		rc |= pm8xxx_readb(chip->dev->parent, PM8921_USB_TRIM_SEL,
+								&trim_sel_reg);
+		rc |= pm8xxx_writeb(chip->dev->parent, REG_SBI_CONFIG, regsbi);
+		if (rc)
+			pr_err("Failed to read trim sel register rc=%d\n", rc);
+
+		if (trim_sel_reg & PM8921_USB_TRIM_SEL_BIT)
+			chip->usb_trim_table = usb_trim_pm8921_table_1;
+		else
+			chip->usb_trim_table = usb_trim_pm8921_table_2;
+	}
 }
 
 struct pm_chg_irq_init_data {
@@ -5056,13 +5124,19 @@ static int pm8921_charger_resume(struct device *dev)
 #endif
 	struct pm8921_chg_chip *chip = dev_get_drvdata(dev);
 
-	pr_track("enter");
+	/*	if we are in charging, the capacity shall be decreased */
+	if (chip->soc[SOC_SMOOTH] > chip->soc[SOC_TRUE]) {
+
+		pr_track("enter sync capacity from %d to %d\n", chip->soc[SOC_SMOOTH], chip->soc[SOC_TRUE]);
+	
+		chip->soc[SOC_SMOOTH] = chip->soc[SOC_TRUE];
+	}
+	else 
+		pr_track("enter\n");
 
 #if (ENABLE_BTM == 1)
 	if (!(chip->cool_temp_dc == INT_MIN && chip->warm_temp_dc == INT_MIN)) {
 
-		pr_err("enter logic");
-		
 		rc = pm8xxx_adc_btm_configure(&btm_config);
 		if (rc)
 			pr_err("couldn't reconfigure btm rc=%d\n", rc);
@@ -5085,13 +5159,11 @@ static int pm8921_charger_suspend(struct device *dev)
 	int rc;
 	struct pm8921_chg_chip *chip = dev_get_drvdata(dev);
 
-	pr_track("enter");
+	pr_track("enter\n");
 
 #if (ENABLE_BTM == 1)
 	if (!(chip->cool_temp_dc == INT_MIN && chip->warm_temp_dc == INT_MIN)) {
 
-		pr_err("enter logic");
-		
 		rc = pm8xxx_adc_btm_end();
 		if (rc)
 			pr_err("Failed to disable BTM on suspend rc=%d\n", rc);
@@ -5143,16 +5215,25 @@ static unsigned int target_get_power_on_reason(void)
 }
 
 //CORE-DL-FixForcePowerOn-00 +[
+
+/* CORE-EL-FixPowerCycle-00*[ */
 bool is_power_off_charging(void)
 {
-	unsigned int	power_on_reason = target_get_power_on_reason();
+	static int saved_power_on_reason = -1;
 
-	pr_track("power_on_reason = %d, is_warmboot = %d \n", power_on_reason, is_warmboot);
-	if ((power_on_reason == PWR_ON_EVENT_USB_CHG) && (is_warmboot == 0))
-		return true;
-	else
-		return false;
+	if (saved_power_on_reason == -1) {
+		unsigned int	power_on_reason = target_get_power_on_reason();
+
+		pr_track("power_on_reason = %d, is_warmboot = %d \n", power_on_reason, is_warmboot);
+		if ((power_on_reason == PWR_ON_EVENT_USB_CHG) && (is_warmboot == 0))
+			saved_power_on_reason = 1;
+		else
+			saved_power_on_reason = 0;
+	}
+
+	return (bool) saved_power_on_reason;
 }
+/* CORE-EL-FixPowerCycle-00*] */
 
 void write_pwron_cause (int pwron_cause);
 static ssize_t chg_is_enter_power_off_charging(struct device *dev,
@@ -5354,7 +5435,9 @@ static void brain(struct work_struct *work)
 		CHG_AUTO_ENABLE(chip, 0);
 		chgdone_irq_handler(chip->pmic_chg_irq[CHGDONE_IRQ], chip);
 
+#if 0 /* %%TBTA: this is buggy and will cause charging restart again */
 		set_rv(chip, true, __func__, __LINE__);
+#endif
 	
 		pr_err("ERROR!! Safety Timer expired\n");
 	}
@@ -5573,7 +5656,7 @@ static int __devinit pm8921_charger_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, chip);
 	the_chip = chip;
 
-	pm8921_usb_ovp_set_threshold(PM_USB_OV_5P5V);
+	pm8921_usb_ovp_set_threshold(PM_USB_OV_6P5V);
 
 	/* 
 	 *	read battery temperature to and store the init value for latter
@@ -5589,7 +5672,7 @@ static int __devinit pm8921_charger_probe(struct platform_device *pdev)
 	INIT_DELAYED_WORK(&chip->unplug_check_work, unplug_check_worker);
 
 	INIT_WORK(&chip->bms_notify.work, bms_notify);
-	INIT_WORK(&chip->battery_id_valid_work, battery_id_valid);
+	INIT_WORK(&chip->battery_present_work, battery_present);
 
 	INIT_DELAYED_WORK(&chip->update_heartbeat_work, update_heartbeat);
 

@@ -1288,12 +1288,12 @@ static DEVICE_ATTR(mode, 0660, bma250_mode_show, bma250_mode_store);
 static DEVICE_ATTR(range, 0660, bma250_range_show, bma250_range_store);
 static DEVICE_ATTR(reg, 0660, bma250_reg_show, bma250_reg_store);
 static DEVICE_ATTR(value, 0640, bma250_value_show, bma250_value_store);
-static DEVICE_ATTR(update, 0660,NULL, bma250_update_store);
-static DEVICE_ATTR(selftest, 0660,bma250_selftest_show, bma250_selftest_store);
+static DEVICE_ATTR(update, 0640,NULL, bma250_update_store);
+static DEVICE_ATTR(selftest, 0640,bma250_selftest_show, bma250_selftest_store);
 /*PERI-AC-Interrupt-00+{*/
-static DEVICE_ATTR(axi, 0660,NULL, bma250_gaxi_store);
-static DEVICE_ATTR(count, 0660,NULL, bma250_polling_count_store);
-static DEVICE_ATTR(pd, 0660,NULL, bma250_pdelay_store);
+static DEVICE_ATTR(axi, 0640,NULL, bma250_gaxi_store);
+static DEVICE_ATTR(count, 0640,NULL, bma250_polling_count_store);
+static DEVICE_ATTR(pd, 0640,NULL, bma250_pdelay_store);
 /*PERI-AC-Interrupt-00+}*/
 static struct attribute *bma250_attributes[] = {
     &dev_attr_bandwidth.attr,

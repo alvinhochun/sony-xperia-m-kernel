@@ -67,7 +67,7 @@ int msm_spm_set_vdd(unsigned int cpu, unsigned int vlevel)
 	info.cpu = cpu;
 	info.vlevel = vlevel;
 
-	if (cpu_online(cpu)) {
+	if ((smp_processor_id() != cpu) && cpu_online(cpu)) {
 		/**
 		 * We do not want to set the voltage of another core from
 		 * this core, as its possible that we may race the vdd change
@@ -185,9 +185,8 @@ int msm_spm_turn_on_cpu_rail(unsigned int cpu)
 
 	reg = saw_bases[cpu];
 
-	if (cpu_is_msm8960() || cpu_is_msm8930() || cpu_is_msm8930aa() ||
-	    cpu_is_apq8064() || cpu_is_msm8627() || cpu_is_msm8960ab() ||
-						cpu_is_apq8064ab()) {
+	if (soc_class_is_msm8960() || soc_class_is_msm8930() ||
+	    soc_class_is_apq8064()) {
 		val = 0xA4;
 		reg += 0x14;
 		timeout = 512;

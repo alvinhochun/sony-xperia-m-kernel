@@ -20,9 +20,8 @@ typedef enum
 	PHASE_PreAP = 45,
 	PHASE_AP = 50,
 	PHASE_TP = 60,
-	PHASE_TP2 = 65,
 	PHASE_PQ = 70,
-	PHASE_MP = 80,
+	PHASE_TP2_MP = 80,
 	PHASE_ANY = 0XFE,
 	PHASE_MAX = 0XFF
 }fih_product_phase_type;
@@ -58,7 +57,6 @@ typedef struct {
   fih_sim_type sim_type;  
 }fih_hwid_entry;
 
-//MTD-BSP-LC-SMEM-00+[
 void fih_get_oem_info(void);
 void fih_info_init(void);
 unsigned int fih_get_product_id(void);
@@ -67,7 +65,6 @@ unsigned int fih_get_band_id(void);
 unsigned int fih_get_sim_id(void);
 int fih_hwid_read(void);
 char *fih_get_amss_version(void);
-//MTD-BSP-LC-SMEM-00+]
 char *fih_get_nonHLOS_git_head(void);  //BSP-REXER-GIT-00+
 void fih_get_NONHLOS_version(void);    //MTD-BSP-LC-Get_Version-00 +
 

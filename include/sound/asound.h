@@ -2,6 +2,7 @@
  *  Advanced Linux Sound Architecture - ALSA - Driver
  *  Copyright (c) 1994-2003 by Jaroslav Kysela <perex@perex.cz>,
  *                             Abramo Bagnara <abramo@alsa-project.org>
+ *  Copyright (C) 2013 Foxconn International Holdings, Ltd. All rights reserved.
  *
  *
  *   This program is free software; you can redistribute it and/or modify
@@ -487,9 +488,10 @@ enum {
 #define SNDRV_PCM_IOCTL_READN_FRAMES	_IOR('A', 0x53, struct snd_xfern)
 #define SNDRV_PCM_IOCTL_LINK		_IOW('A', 0x60, int)
 #define SNDRV_PCM_IOCTL_UNLINK		_IO('A', 0x61)
+/* MM-NC-HAC-00-[+ */
 #define SNDRV_PCM_IOCTL_OPENHAC		_IO('A', 0x62)
-#define SNDRV_PCM_IOCTL_CLOSEHAC		_IO('A', 0x63)
-
+#define SNDRV_PCM_IOCTL_CLOSEHAC	_IO('A', 0x63)
+/* MM-NC-HAC-00-]- */
 
 /*****************************************************************************
  *                                                                           *
