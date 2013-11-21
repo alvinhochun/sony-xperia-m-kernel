@@ -2031,7 +2031,7 @@ static int sitar_hph_pa_event(struct snd_soc_dapm_widget *w,
 
 		pr_debug("%s: sleep 10 ms after %s PA disable.\n", __func__,
 				w->name);
-		//usleep_range(10000, 10000);
+		usleep_range(10000, 10000);
 
 		if (sitar_is_line_pa_on(codec))
 			sitar_enable_classg(codec, true);

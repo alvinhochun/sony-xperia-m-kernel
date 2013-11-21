@@ -2094,6 +2094,28 @@ static int set_fake_temp_param(const char *val, struct kernel_param *kp)
 module_param_call(fake_temp, set_fake_temp_param, param_get_uint,
 					&fake_temp, 0644);
 
+//CORE-DL-AdbWriteRestartReason-00 +[
+u32 reason;
+void msm_write_restart_reason(u32 reason);
+static int write_restart_reason(const char *val, struct kernel_param *kp)
+{
+	int ret;
+
+	ret = param_set_uint(val, kp);
+	if (ret) {
+		pr_err("error setting value %d\n", ret);
+		return ret;
+	}
+
+	if (reason)
+		msm_write_restart_reason(reason);
+
+	return 0;
+}
+module_param_call(restart_reason, write_restart_reason, NULL,
+					&reason, 0644);
+//CORE-DL-AdbWriteRestartReason-00 +]
+
 static int update_soc(struct pm8921_chg_chip *chip)
 {
 	int soc = get_prop_batt_capacity(chip);

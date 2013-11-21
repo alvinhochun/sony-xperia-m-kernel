@@ -275,7 +275,17 @@ static int adreno_setup_pt(struct kgsl_device *device,
 	if (result)
 		goto unmap_memstore_desc;
 
+	if (adreno_is_a305(adreno_dev)) {
+		result = kgsl_mmu_map_global(pagetable,
+				&adreno_dev->on_resume_cmd,
+				GSL_PT_PAGE_RV | GSL_PT_PAGE_WV);
+		if (result)
+			goto unmap_setstate_desc;
+	}
 	return result;
+
+unmap_setstate_desc:
+	kgsl_mmu_unmap(pagetable, &device->mmu.setstate_memory);
 
 unmap_memstore_desc:
 	kgsl_mmu_unmap(pagetable, &device->memstore);
@@ -1171,6 +1181,7 @@ adreno_probe(struct platform_device *pdev)
 		goto error_close_rb;
 
 	adreno_debugfs_init(device);
+	adreno_dev->on_resume_issueib = false;
 
 	kgsl_pwrscale_init(device);
 	kgsl_pwrscale_attach_policy(device, ADRENO_DEFAULT_PWRSCALE_POLICY);
@@ -1196,6 +1207,8 @@ static int __devexit adreno_remove(struct platform_device *pdev)
 
 	kgsl_pwrscale_detach_policy(device);
 	kgsl_pwrscale_close(device);
+	if (adreno_is_a305(adreno_dev))
+		kgsl_sharedmem_free(&adreno_dev->on_resume_cmd);
 
 	adreno_ringbuffer_close(&adreno_dev->ringbuffer);
 	kgsl_device_platform_remove(device);
@@ -1274,6 +1287,18 @@ static int adreno_start(struct kgsl_device *device, unsigned int init_ram)
 		ft_detect_regs[10] = A3XX_RBBM_PERFCTR_SP_5_LO;
 		ft_detect_regs[11] = A3XX_RBBM_PERFCTR_SP_5_HI;
 	}
+
+	/*
+	 * Allocate some memory for A305 to do an extra draw on resume
+	 * from SLUMBER state.
+	 */
+	if (adreno_is_a305(adreno_dev) &&
+			adreno_dev->on_resume_cmd.hostptr == NULL) {
+		status = kgsl_allocate_contiguous(&adreno_dev->on_resume_cmd,
+					PAGE_SIZE);
+		if (status)
+			goto error_clk_off;
+        }
 
 	status = kgsl_mmu_start(device);
 	if (status)
@@ -1687,7 +1712,7 @@ _adreno_ft_restart_device(struct kgsl_device *device,
 		   struct kgsl_context *context)
 {
 
-	struct adreno_context *adreno_context = context->devctxt;
+	struct adreno_context *adreno_context = NULL;
 
 	/* restart device */
 	if (adreno_stop(device)) {
@@ -1700,9 +1725,11 @@ _adreno_ft_restart_device(struct kgsl_device *device,
 		return 1;
 	}
 
-	if (context)
+	if ((context != NULL) && (context->devctxt != NULL)) {
+		adreno_context = context->devctxt;
 		kgsl_mmu_setstate(&device->mmu, adreno_context->pagetable,
 			KGSL_MEMSTORE_GLOBAL);
+	}
 
 	/* If iommu is used then we need to make sure that the iommu clocks
 	 * are on since there could be commands in pipeline that touch iommu */
@@ -2435,6 +2462,8 @@ static int adreno_suspend_context(struct kgsl_device *device)
 		adreno_drawctxt_switch(adreno_dev, NULL, 0);
 		status = adreno_idle(device);
 	}
+	if (adreno_is_a305(adreno_dev))
+		adreno_dev->on_resume_issueib = true;
 
 	return status;
 }
@@ -3241,8 +3270,18 @@ static struct platform_driver adreno_platform_driver = {
 	}
 };
 
+/* CORE-EL-fix_power_off_charging_resume_fail-00+ */
+extern bool is_power_off_charging(void);
+
 static int __init kgsl_3d_init(void)
 {
+	/* CORE-EL-fix_power_off_charging_resume_fail-00+[ */
+	if (is_power_off_charging()) {
+		pr_err("in power off charging don't init\n");
+		return 0;
+	}
+	/* CORE-EL-fix_power_off_charging_resume_fail-00+] */
+
 	return platform_driver_register(&adreno_platform_driver);
 }
 
