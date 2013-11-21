@@ -854,17 +854,19 @@ static struct gpio fih_back_cam_gpio[] = {
 //MM-MC-BringUpCameraRawSensorS5k4e1-00+}
 };
 
-static struct msm_gpio_set_tbl fih_front_cam_gpio_set_tbl[] = {
 //MM-MC-BringUpFrontCameraMT9V115-00+{
+//MM-UW-fix Camera switch fail-00+{
+static struct msm_gpio_set_tbl fih_front_cam_gpio_set_tbl[] = {
 #if defined(CONFIG_MT9V115) || defined(CONFIG_HM03D5)//MM-MC-BringUpCameraYUVSensorForHM03D5-00+
     //Init all VGA pins
     {77, GPIOF_OUT_INIT_LOW, 0},
     {76, GPIOF_OUT_INIT_LOW, 0},
     {96, GPIOF_OUT_INIT_LOW, 100},
     //Power on
-    {96, GPIOF_OUT_INIT_HIGH, 1},
-    {76, GPIOF_OUT_INIT_HIGH, 500},
+    {96, GPIOF_OUT_INIT_HIGH, 20000},
+    {76, GPIOF_OUT_INIT_HIGH, 1000},
 #endif
+//MM-UW-fix Camera switch fail-00+}
 //MM-MC-BringUpFrontCameraMT9V115-00+}
 };
 

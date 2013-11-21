@@ -213,10 +213,7 @@ static void adb_complete_out(struct usb_ep *ep, struct usb_request *req)
 
 	dev->rx_done = 1;
 	if (req->status != 0 && req->status != -ECONNRESET)
-	{
-		printk(KERN_ERR "[adb]adb_complete_out error\n");
 		atomic_set(&dev->error, 1);
-		}
 
 	wake_up(&dev->read_wq);
 }
@@ -359,10 +356,7 @@ requeue_req:
 			}
 
 	} else
-	{
-		printk(KERN_ERR "[adb]adb_read IO error[2]!\n");
 		r = -EIO;
-		}
 
 done:
 	if (atomic_read(&dev->error))
@@ -490,7 +484,6 @@ static int adb_release(struct inode *ip, struct file *fp)
 
 	if (__ratelimit(&rl))
 		pr_info("adb_release\n");
-	dump_stack();//For Monkey test trace call stack
 
 	/*
 	 * ADB daemon closes the device file after I/O error.  The

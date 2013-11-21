@@ -101,17 +101,6 @@ struct smem_oem_info
 #define MTD_SUSPEND_LOG_SIZE 0x00020000 /* 128KB */
 
 /*===========================================================================
-                        FIH RPM definition
-===========================================================================*/
-/*0x881C0000*/
-#define RPM_MSG_RAM_PHYS_ADDR (MTD_SUSPEND_LOG_BASE + MTD_SUSPEND_LOG_SIZE)
-#define RPM_MSG_RAM_SIZE      0x00006000 /*24KB */
-
-/*0x881C6000*/
-#define RPM_CODE_RAM_PHYS_ADDR (RPM_MSG_RAM_PHYS_ADDR + RPM_MSG_RAM_SIZE)
-#define RPM_CODE_RAM_SIZE      0x00024000 /*144KB */
-
-/*===========================================================================
                         FIH Other definition
 ===========================================================================*/
 #define FIH_OTHER_DATA_BASE	(RAM_CONSOLE_PHYS + MTD_RAM_CONSOLE_SIZE)

@@ -59,6 +59,10 @@ uint64_t msm_bus_div64(unsigned int w, uint64_t bw)
 		return 1;
 
 	switch (w) {
+/*CORE-TH-system-stability-01+[CR#459651*/
+	case 0:
+		WARN(1, "AXI: Divide by 0 attempted\n");
+/*CORE-TH-system-stability-01+]CR#459651*/
 	case 1: return bw;
 	case 2:	return (bw >> 1);
 	case 4:	return (bw >> 2);
@@ -406,8 +410,17 @@ static int update_path(int curr, int pnode, uint64_t req_clk, uint64_t req_bw,
 			req_clk);
 		bwsum_hz = BW_TO_CLK_FREQ_HZ(hop->node_info->buswidth,
 			bwsum);
+/*CORE-TH-system-stability-01+[CR#459651*/
+		/* Account for multiple channels if any */
+		if (hop->node_info->num_sports > 1)
+			bwsum_hz = msm_bus_div64(hop->node_info->num_sports,
+				bwsum_hz);
+		MSM_BUS_DBG("AXI: Hop: %d, ports: %d, bwsum_hz: %llu\n",
+				hop->node_info->id, hop->node_info->num_sports,
+				bwsum_hz);
 		MSM_BUS_DBG("up-clk: curr_hz: %llu, req_hz: %llu, bw_hz %llu\n",
 			curr_clk, req_clk, bwsum_hz);
+/*CORE-TH-system-stability-01+]CR#459651*/
 		ret = fabdev->algo->update_clks(fabdev, hop, index,
 			curr_clk_hz, req_clk_hz, bwsum_hz, SEL_FAB_CLK,
 			ctx, cl_active_flag);
@@ -617,6 +630,16 @@ int msm_bus_scale_client_update_request(uint32_t cl, unsigned index)
 			curr_bw = client->pdata->usecase[curr].vectors[i].ab;
 			MSM_BUS_DBG("ab: %llu ib: %llu\n", curr_bw, curr_clk);
 		}
+/*CORE-TH-system-stability-01+[ CR# 407057*/
+		if (index == 0) {
+			/* This check protects the bus driver from clients
+			 * that can leave non-zero requests after
+			 * unregistering.
+			 * */
+			req_clk = 0;
+			req_bw = 0;
+		}
+/*CORE-TH-system-stability-01+]CR# 407057*/
 
 		if (!pdata->active_only) {
 			ret = update_path(src, pnode, req_clk, req_bw,

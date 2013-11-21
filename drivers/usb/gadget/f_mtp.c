@@ -1069,7 +1069,6 @@ static int mtp_open(struct inode *ip, struct file *fp)
 static int mtp_release(struct inode *ip, struct file *fp)
 {
 	printk(KERN_INFO "mtp_release\n");
-	dump_stack();//For Monkey test trace call stack
 
 	mtp_unlock(&_mtp_dev->open_excl);
 	return 0;

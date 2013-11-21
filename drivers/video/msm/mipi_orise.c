@@ -26,6 +26,7 @@
 /* MM-VH-DISPLAY-NICKI20.1+ */
 #define TRULY_PANEL_V2_ID 0x46
 #define TRULY_PANEL_V3_ID 0x49
+#define TRULY_PANEL_V4_ID 0x50
 /* MM-KW-CMI_V2-01+{ */
 #define CMI_PANEL_V2_ID 0x47
 #define CMI_PANEL_V3_ID 0x48
@@ -289,7 +290,115 @@ static char truly_gamma_negitive[17] = {0xE2, 0x02, 0x0B, 0x0E, 0x0E, 0x07,
                                               0x0D, 0x0B, 0x0B, 0x02, 0x06,
                                               0x16, 0x0E, 0x14, 0x1E, 0x0A,
                                               0x00}; /* DTYPE_GEN_LWRITE */
-/* Gamma 2.5 - */
+static char truly_gamma24_positive_offset[2] = {0x00, 0x00};
+static char truly_gamma24_positive[17] = {0xe1,0x02,0x09,0x0e,0x0e,0x07,0x0d,0x0b,0x0b,0x02,0x06,0x16,0x11,0x17,0x20,0x0c,0x00}; /* DTYPE_GEN_LWRITE */
+static char truly_gamma24_negitive_offset[2] = {0x00, 0x00};
+static char truly_gamma24_negitive[17] = {0xe2,0x02,0x09,0x0e,0x0e,0x07,0x0d,0x0b,0x0b,0x02,0x06,0x16,0x11,0x17,0x20,0x0c,0x00}; /* DTYPE_GEN_LWRITE */
+static char truly_3gamma_EC[34] = {0xEC,
+            0x40,                                       
+            0x44,                                       
+            0x44,                                       
+            0x44,                                       
+            0x44,                                       
+            0x44,                                       
+            0x44,                                       
+            0x44,                                       
+            0x44,                                       
+            0x44,                                       
+            0x44,                                       
+            0x34,                                                                    
+            0x33,                                                                    
+            0x33,                                                                    
+            0x43,                                                                    
+            0x44,                                                                    
+            0x44,                                                                    
+            0x44,                                                                    
+            0x44,                                                                    
+            0x44,                                                                    
+            0x44,                                                                    
+            0x44,                                                                    
+            0x44,                                                                    
+            0x44,                                                                    
+            0x44,                                                                    
+            0x44,                                                                    
+            0x44,                                                                    
+            0x44,                                                                    
+            0x44,                                                                    
+            0x55,                                                                    
+            0x55,                                                                    
+            0x55,                                                                    
+            0x04};
+
+static char truly_3gamma_ED[34] = {0xED,
+            0x40,                                                                    
+            0x44,                                                                    
+            0x44,                                                                    
+            0x44,                                                                    
+            0x44,                                                                    
+            0x44,                                                                    
+            0x44,                                                                    
+            0x44,                                                                    
+            0x44,                                                                    
+            0x44,                                                                    
+            0x44,                                                                    
+            0x44,                                                                    
+            0x44,                                                                    
+            0x44,                                                                    
+            0x44,                                                                    
+            0x44,                                                                    
+            0x44,                                                                    
+            0x44,                                                                    
+            0x44,                                                                    
+            0x44,                                                                    
+            0x44,                                                                    
+            0x44,                                                                    
+            0x44,                                                                    
+            0x44,                                                                    
+            0x44,                                                                    
+            0x44,                                                                    
+            0x44,                                                                    
+            0x44,                                                                    
+            0x44,                                                                    
+            0x44,                                                                    
+            0x44,                                                                    
+            0x44,                                                                    
+            0x04};
+
+static char truly_3gamma_EE[34] = {0xEE,
+            0x30,                                                                    
+            0x33,                                                                    
+            0x33,                                                                    
+            0x33,                                                                    
+            0x43,                                                                    
+            0x44,                                                                    
+            0x44,                                                                    
+            0x44,                                                                    
+            0x44,                                                                    
+            0x44,                                                                    
+            0x44,                                                                    
+            0x44,                                                                    
+            0x44,                                                                    
+            0x44,                                                                    
+            0x44,                                                                    
+            0x44,                                                                    
+            0x44,                                                                    
+            0x44,                                                                    
+            0x44,                                                                    
+            0x44,                                                                    
+            0x44,                                                                    
+            0x44,                                                                    
+            0x44,                                                                    
+            0x44,                                                                    
+            0x44,                                                                    
+            0x44,                                                                    
+            0x44,                                                                    
+            0x54,                                                                    
+            0x55,                                                                    
+            0x55,                                                                    
+            0x55,                                                                    
+            0x45,                                                                    
+            0x04};
+
 /* MM-VH-DISPLAY-NICKI21+[ */
 static char truly_CEEN_offset[2] = {0x00, 0x80};
 static char truly_CEEN[2] = {0xD6, 0x28};
@@ -590,7 +699,46 @@ static struct dsi_cmd_desc orise_truly_v3_on_cmds[] = {
 	{DTYPE_DCS_WRITE1, 1, 0, 0, 0,	sizeof(write_display_brightness), write_display_brightness}
 #endif
 };
-/* MM-VH-DISPLAY-NICKI20.1*] */
+static struct dsi_cmd_desc orise_truly_v4_on_cmds[] = {
+	{DTYPE_GEN_WRITE1, 1, 0, 0, 0, sizeof(truly_cmd2_enable_offset), truly_cmd2_enable_offset},
+	{DTYPE_GEN_LWRITE, 1, 0, 0, 0, sizeof(truly_cmd2_enable), truly_cmd2_enable},
+	{DTYPE_GEN_WRITE1, 1, 0, 0, 0, sizeof(truly_orise_cmd2_enable_offset), truly_orise_cmd2_enable_offset},
+	{DTYPE_GEN_LWRITE, 1, 0, 0, 0, sizeof(truly_orise_cmd2_enable), truly_orise_cmd2_enable},
+	{DTYPE_GEN_WRITE1, 1, 0, 0, 0, sizeof(truly_gamma24_positive_offset), truly_gamma24_positive_offset},
+	{DTYPE_GEN_LWRITE, 1, 0, 0, 0, sizeof(truly_gamma24_positive), truly_gamma24_positive},
+	{DTYPE_GEN_WRITE1, 1, 0, 0, 0, sizeof(truly_gamma24_negitive_offset), truly_gamma24_negitive_offset},
+	{DTYPE_GEN_LWRITE, 1, 0, 0, 0, sizeof(truly_gamma24_negitive), truly_gamma24_negitive},
+	{DTYPE_GEN_WRITE1, 1, 0, 0, 0, sizeof(shift_addr00), shift_addr00},
+	{DTYPE_GEN_LWRITE, 1, 0, 0, 0, sizeof(truly_3gamma_EC), truly_3gamma_EC}, 
+	{DTYPE_GEN_WRITE1, 1, 0, 0, 0, sizeof(shift_addr00), shift_addr00},
+	{DTYPE_GEN_LWRITE, 1, 0, 0, 0, sizeof(truly_3gamma_ED), truly_3gamma_ED}, 
+	{DTYPE_GEN_WRITE1, 1, 0, 0, 0, sizeof(shift_addr00), shift_addr00},
+	{DTYPE_GEN_LWRITE, 1, 0, 0, 0, sizeof(truly_3gamma_EE), truly_3gamma_EE}, 
+	{DTYPE_GEN_WRITE1, 1, 0, 0, 0, sizeof(truly_CEEN_offset), truly_CEEN_offset},
+	{DTYPE_GEN_WRITE1, 1, 0, 0, 0, sizeof(truly_CEEN), truly_CEEN},
+	{DTYPE_GEN_WRITE1, 1, 0, 0, 0, sizeof(truly_cmd2_disable_offset), truly_cmd2_disable_offset},
+	{DTYPE_GEN_LWRITE, 1, 0, 0, 0, sizeof(truly_cmd2_disable), truly_cmd2_disable},	
+	{DTYPE_GEN_WRITE1, 1, 0, 0, 0, sizeof(truly_orise_cmd2_disable_offset), truly_orise_cmd2_disable_offset},
+	{DTYPE_GEN_LWRITE, 1, 0, 0, 0, sizeof(truly_orise_cmd2_disable), truly_orise_cmd2_disable},
+#ifdef CONFIG_FIH_SW_LCM_BC
+	{DTYPE_GEN_WRITE1, 1, 0, 0, 0, sizeof(truly_pwm_1_offset), truly_pwm_1_offset},
+	{DTYPE_GEN_WRITE1, 1, 0, 0, 0, sizeof(truly_pwm_1), truly_pwm_1},
+	{DTYPE_GEN_WRITE1, 1, 0, 0, 0, sizeof(truly_pwm_2_offset), truly_pwm_2_offset},
+	{DTYPE_GEN_WRITE1, 1, 0, 0, 0, sizeof(truly_pwm_2), truly_pwm_2},
+#endif
+	{DTYPE_GEN_WRITE1, 1, 0, 0, 0, sizeof(truly_bc_offset), truly_bc_offset},
+	{DTYPE_DCS_WRITE1, 1, 0, 0, 0, sizeof(truly_bc), truly_bc},
+	{DTYPE_GEN_WRITE1, 1, 0, 0, 0, sizeof(truly_tear_on_offset), truly_tear_on_offset},
+	{DTYPE_DCS_WRITE1, 1, 0, 0, 0, sizeof(truly_tear_on), truly_tear_on},
+	{DTYPE_GEN_WRITE1, 1, 0, 0, 0, sizeof(truly_sleep_out_offset), truly_sleep_out_offset},
+	{DTYPE_DCS_WRITE1, 1, 0, 0, 120, sizeof(truly_sleep_out), truly_sleep_out},
+	{DTYPE_GEN_WRITE1, 1, 0, 0, 0, sizeof(truly_display_on_offset), truly_display_on_offset},
+	{DTYPE_DCS_WRITE1, 1, 0, 0, 0, sizeof(truly_display_on), truly_display_on},
+#ifdef CONFIG_FIH_SW_LCM_BC
+	{DTYPE_DCS_WRITE1, 1, 0, 0, 0,	sizeof(write_display_brightness), write_display_brightness}
+#endif
+};
+/* MM-VH-DISPLAY-NICKI20*] */
 static struct dsi_cmd_desc orise_auo_video_on_cmds[] = {
 	{DTYPE_GEN_LWRITE, 1, 0, 0, 0,
 		sizeof(extc), extc},
@@ -730,7 +878,6 @@ static char shift_addrA6[2] = {0x00, 0xA6}; /* DTYPE_GEN_WRITE1 */
 static char shift_addrB0[2] = {0x00, 0xB0}; /* DTYPE_GEN_WRITE1 */
 static char shift_addrB2[2] = {0x00, 0xB2}; /* DTYPE_GEN_WRITE1 */
 static char x47_set_A_data_latch[2] = {0xC4, 0x00};
-/* MM-VH-DISPLAY-NICKI22+ */
 static char x47_set_A_data_latch_to_0x08[2] = {0xC4, 0x08};
 static char x47_set_B_source_gate[2] = {0xB3, 0x00};
 static char x47_set_C_data_latch[2] = {0xC4, 0x08};
@@ -826,7 +973,6 @@ static struct dsi_cmd_desc x47_orise_cmi_video_on_cmds[] = {
 		sizeof(display_on), display_on}
 };
 
-/* MM-VH-DISPLAY-NICKI22*[ */
 static struct dsi_cmd_desc x47_orise_cmi_v2_video_on_cmds[] = {
 	{DTYPE_GEN_WRITE1, 1, 0, 0, 0,
 		sizeof(shift_addr00), shift_addr00},
@@ -871,7 +1017,7 @@ static struct dsi_cmd_desc x47_orise_cmi_v2_video_on_cmds[] = {
 	{DTYPE_DCS_WRITE, 1, 0, 0, 10,
 		sizeof(display_on), display_on}
 };
-/* MM-VH-DISPLAY-NICKI22*] */
+
 static struct dsi_cmd_desc x47_orise_cmi_video_off_cmds[] = {
 	{DTYPE_DCS_WRITE, 1, 0, 0, 40,
 		sizeof(display_off), display_off},
@@ -928,6 +1074,10 @@ static int mipi_orise_lcd_on(struct platform_device *pdev)
 	}
 /* MM-VH-DISPLAY-NICKI20.1*[ */
 	switch (gPanelModel) {
+		case TRULY_PANEL_V4_ID:
+			rc = mipi_dsi_cmds_tx(&orise_tx_buf, orise_truly_v4_on_cmds,
+					ARRAY_SIZE(orise_truly_v4_on_cmds));
+			break;
 		case TRULY_PANEL_V3_ID:
 			rc = mipi_dsi_cmds_tx(&orise_tx_buf, orise_truly_v3_on_cmds,
 					ARRAY_SIZE(orise_truly_v3_on_cmds));
