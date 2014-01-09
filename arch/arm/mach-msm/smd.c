@@ -3620,6 +3620,11 @@ void fih_parse_power_on_cause (void)
 			if (*hw_wd_ptr == FIH_HW_WD_SIGNATURE)
 				*pwron_cause_ptr |= MTD_PWR_ON_EVENT_HW_WD_RESET;
 
+			//CORE-DL-AddPocForRPM-00 +[
+			if (*pwron_cause_ptr & MTD_PWR_ON_EVENT_RPM_WD_RESET)
+				printk(KERN_ERR "System was reset by RPM Watchdog Reset!\r\n");
+			//CORE-DL-AddPocForRPM-00 +]
+
 			fih_power_on_cause |= *pwron_cause_ptr;
 			if ((*pwron_cause_ptr == MTD_PWR_ON_EVENT_CLEAN_DATA) ||
 				(*pwron_cause_ptr == MTD_PWR_ON_EVENT_SOFTWARE_RESET) || //CORE-DL-AddPocForSwReset-00

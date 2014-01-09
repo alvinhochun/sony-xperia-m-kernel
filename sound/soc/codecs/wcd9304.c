@@ -1994,13 +1994,23 @@ static int sitar_hph_pa_event(struct snd_soc_dapm_widget *w,
 				 &sitar->hph_pa_dac_state);
 			if (sitar->hph_status & SND_JACK_OC_HPHL)
 				schedule_work(&sitar->hphlocp_work);
-		} else if (w->shift == 4) {
+/* MM-AY-NickiSS04711-00-[+ */	
 			clear_bit(SITAR_HPHR_PA_OFF_ACK,
 				 &sitar->hph_pa_dac_state);
 			clear_bit(SITAR_HPHR_DAC_OFF_ACK,
 				 &sitar->hph_pa_dac_state);
 			if (sitar->hph_status & SND_JACK_OC_HPHR)
 				schedule_work(&sitar->hphrocp_work);
+/* MM-AY-NickiSS04711-00-]- */
+		} else if (w->shift == 4) {
+			#if 0 /* MM-AY-NickiSS04711-00-- */
+			clear_bit(SITAR_HPHR_PA_OFF_ACK,
+				 &sitar->hph_pa_dac_state);
+			clear_bit(SITAR_HPHR_DAC_OFF_ACK,
+				 &sitar->hph_pa_dac_state);
+			if (sitar->hph_status & SND_JACK_OC_HPHR)
+				schedule_work(&sitar->hphrocp_work);
+			#endif /* MM-AY-NickiSS04711-00-- */
 		}
 /* MM-AY-NIK01817-00-[+ */
 		usleep_range(10000, 10000);

@@ -133,6 +133,20 @@ void msm_set_restart_mode(int mode)
 }
 EXPORT_SYMBOL(msm_set_restart_mode);
 
+//CORE-DL-AdbWriteRestartReason-00 +[
+static int lights_on;
+u32 reboot_reason;
+void msm_write_restart_reason(u32 reason)
+{
+	reboot_reason = reason;
+	lights_on = 1;
+
+	pr_err("ADB write 0x%08x into restart_reason\n", reboot_reason);
+	__raw_writel(reboot_reason, restart_reason);
+}
+EXPORT_SYMBOL(msm_write_restart_reason);
+//CORE-DL-AdbWriteRestartReason-00 +]
+
 static void __msm_power_off(int lower_pshold)
 {
 	printk(KERN_CRIT "Powering off the SoC\n");
@@ -247,6 +261,11 @@ unsigned int *fih_hw_wd_ptr;
 	} else {
 		__raw_writel(0x77665501, restart_reason);
 	}
+
+//CORE-DL-AdbWriteRestartReason-00 +[
+	if (lights_on == 1)
+		__raw_writel(reboot_reason, restart_reason);
+//CORE-DL-AdbWriteRestartReason-00 +]
 
 	if ((in_panic == 1) && (debug_ramdump_to_sdcard_enable == 1)) {
 		//Write restart_reason as REBOOT_CRASHDUMP_PANIC

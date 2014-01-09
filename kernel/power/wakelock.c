@@ -231,8 +231,9 @@ exit_add:
 remove_done:	
 	spin_unlock_irqrestore(&pms_list_lock, irqflags);
 }
+ 
+EXPORT_SYMBOL(remove_pms_wakelock_info); /*CORE-SC-PMSWakelockInfo-01**/
  #endif
-  EXPORT_SYMBOL(remove_pms_wakelock_info);
  //MTD-kernel-BH-PMSWakelockInfo-00+]
 
 int get_expired_time(struct wake_lock *lock, ktime_t *expire_time)

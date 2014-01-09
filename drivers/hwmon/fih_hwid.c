@@ -117,8 +117,7 @@ const fih_hwid_entry HWID_TABLE[] = {
     { 1, 1, 6, PROJECT_S3A, PHASE_AP, BAND_18, SIM_MAX},
     { 1, 1, 7, PROJECT_S3A, PHASE_TP, BAND_18, SIM_MAX},
     { 1, 1, 8, PROJECT_S3A, PHASE_PQ, BAND_18, SIM_MAX},
-    { 1, 1, 9, PROJECT_S3A, PHASE_MP, BAND_18, SIM_MAX},
-	{ 1, 1, 10, PROJECT_S3A, PHASE_TP2, BAND_18, SIM_MAX},
+    { 1, 1, 9, PROJECT_S3A, PHASE_TP2_MP, BAND_18, SIM_MAX},
 
     { 1, 2, 1, PROJECT_S3A, PHASE_EVM, BAND_1245, SIM_MAX},
     { 1, 2, 2, PROJECT_S3A, PHASE_PD, BAND_1245, SIM_MAX},
@@ -128,8 +127,7 @@ const fih_hwid_entry HWID_TABLE[] = {
     { 1, 2, 6, PROJECT_S3A, PHASE_AP, BAND_1245, SIM_MAX},
     { 1, 2, 7, PROJECT_S3A, PHASE_TP, BAND_1245, SIM_MAX},
     { 1, 2, 8, PROJECT_S3A, PHASE_PQ, BAND_1245, SIM_MAX},
-    { 1, 2, 9, PROJECT_S3A, PHASE_MP, BAND_1245, SIM_MAX},
-	{ 1, 2, 10, PROJECT_S3A, PHASE_TP2, BAND_1245, SIM_MAX},
+    { 1, 2, 9, PROJECT_S3A, PHASE_TP2_MP, BAND_1245, SIM_MAX},
 
     { 1, 3, 2, PROJECT_S3A, PHASE_PD, BAND_18_INDIA, SIM_MAX},
     { 1, 3, 3, PROJECT_S3A, PHASE_DP, BAND_18_INDIA, SIM_MAX},
@@ -138,8 +136,7 @@ const fih_hwid_entry HWID_TABLE[] = {
     { 1, 3, 6, PROJECT_S3A, PHASE_AP, BAND_18_INDIA, SIM_MAX},
     { 1, 3, 7, PROJECT_S3A, PHASE_TP, BAND_18_INDIA, SIM_MAX},
     { 1, 3, 8, PROJECT_S3A, PHASE_PQ, BAND_18_INDIA, SIM_MAX},
-    { 1, 3, 9, PROJECT_S3A, PHASE_MP, BAND_18_INDIA, SIM_MAX},
-	{ 1, 3, 10, PROJECT_S3A, PHASE_TP2, BAND_18_INDIA, SIM_MAX},
+    { 1, 3, 9, PROJECT_S3A, PHASE_TP2_MP, BAND_18_INDIA, SIM_MAX},
 };
 
 
@@ -345,9 +342,8 @@ int fih_hwid_read(void)
         { PHASE_PreAP, "PreAP" },
         { PHASE_AP, "AP" },
         { PHASE_TP, "TP" },
-		{ PHASE_TP2, "TP2" },
         { PHASE_PQ, "PQ" },
-        { PHASE_MP, "MP" },
+        { PHASE_TP2_MP, "TP2_MP" },
         { PHASE_ANY, "ANY" },
         { PHASE_MAX, "MAX" },
     };

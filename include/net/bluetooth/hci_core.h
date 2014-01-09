@@ -641,9 +641,9 @@ static inline void hci_conn_put(struct hci_conn *conn)
 				if (!conn->out)
 					timeo *= 4;
 			} else
-				timeo = msecs_to_jiffies(10);
+				timeo = msecs_to_jiffies(50);
 		} else
-			timeo = msecs_to_jiffies(10);
+			timeo = msecs_to_jiffies(50);
 		mod_timer(&conn->disc_timer, jiffies + timeo);
 	}
 }

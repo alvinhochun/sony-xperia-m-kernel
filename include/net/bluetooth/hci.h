@@ -120,7 +120,7 @@ enum {
 
 /* HCI timeouts */
 #define HCI_CONNECT_TIMEOUT	(40000)	/* 40 seconds */
-#define HCI_DISCONN_TIMEOUT	(2000)	/* 2 seconds */
+#define HCI_DISCONN_TIMEOUT	(3000)	/* 3 seconds */
 #define HCI_PAIRING_TIMEOUT	(60000)	/* 60 seconds */
 #define HCI_IDLE_TIMEOUT	(6000)	/* 6 seconds */
 #define HCI_INIT_TIMEOUT	(10000)	/* 10 seconds */

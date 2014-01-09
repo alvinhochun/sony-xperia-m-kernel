@@ -69,6 +69,7 @@ struct smem_oem_info
 #define MTD_PWR_ON_EVENT_HW_WD_RESET            0x00100000 // hardware watchdog reset
 #define MTD_PWR_ON_EVENT_SOFTWARE_RESET         0x00200000 // software reset //CORE-DL-AddPocForSwReset-00
 #define MTD_PWR_ON_EVENT_PWR_OFF_CHG_REBOOT     0x00400000 // power off charging reset system //CORE-DL-FixForcePowerOn-00
+#define MTD_PWR_ON_EVENT_RPM_WD_RESET           0x00800000 // rpm watchdog reset //CORE-DL-AddPocForRPM-00
 #define MTD_PWR_ON_EVENT_CLEAN_DATA             0x00000000 // data is clean
 //MTD-KERNEL-DL-PWRON_CAUSE-00 +]
 

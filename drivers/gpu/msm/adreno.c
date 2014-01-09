@@ -2618,8 +2618,18 @@ static struct platform_driver adreno_platform_driver = {
 	}
 };
 
+/* CORE-EL-fix_power_off_charging_resume_fail-00+ */
+extern bool is_power_off_charging(void);
+
 static int __init kgsl_3d_init(void)
 {
+	/* CORE-EL-fix_power_off_charging_resume_fail-00+[ */
+	if (is_power_off_charging()) {
+		pr_err("%s in power off charging don't init\n", __func__);
+		return 0;
+	}
+	/* CORE-EL-fix_power_off_charging_resume_fail-00+] */
+
 	return platform_driver_register(&adreno_platform_driver);
 }
 

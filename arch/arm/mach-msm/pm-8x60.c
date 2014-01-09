@@ -74,12 +74,21 @@ enum {
 	MSM_PM_DEBUG_RPM_SUSPEND_LOG = BIT(9), //MTD-SD1-Power-BH-SuspendLog+
 	MSM_PM_DEBUG_RPM_IDLE_LOG = BIT(10), //CORE-BH-SuspendLog-03+
 	MSM_PM_DEBUG_RPM_IDLE_LOG_ONLY_XOSD_VDDMIN = BIT(11), //CORE-BH-SuspendLog-05+
+	MSM_PM_DEBUG_NOT_MPM_DETECTION = BIT(12), //CORE-BH-SuspendLog-08+
 };
 
 static int msm_pm_debug_mask = 0x201; //CORE-BH-SuspendLog-06*
 module_param_named(
 	debug_mask, msm_pm_debug_mask, int, S_IRUGO | S_IWUSR | S_IWGRP
 );
+
+//CORE-BH-SuspendLog-08+[
+uint not_mpm_duration_threshold = 1800;
+
+module_param_named(
+	not_mpm_duration, not_mpm_duration_threshold, uint, S_IRUGO | S_IWUSR | S_IWGRP
+);
+ //CORE-BH-SuspendLog-08+]
 static int msm_pm_retention_tz_call;
 
 extern int msm_show_resume_irq_mask; //MTD-SD1-Power-BH-SuspendLog-01+
@@ -796,16 +805,34 @@ static bool msm_pm_power_collapse(bool from_idle)
 
 	//CORE-BH-SuspendLog-05+[
 	if (likely(from_idle))
+	{
 		if (unlikely(msm_pm_debug_mask & MSM_PM_DEBUG_RPM_IDLE_LOG && msm_pm_debug_mask & MSM_PM_DEBUG_RPM_SUSPEND_LOG))
 			suspend_log->enable_log = 1;
 		else
 			suspend_log->enable_log = 0;
+		
+		suspend_log->not_mpm_detect = 0; //CORE-BH-SuspendLog-08+
+	}
 	else
 		if (msm_pm_debug_mask & MSM_PM_DEBUG_RPM_SUSPEND_LOG)
+		{
 			suspend_log->enable_log = 1;
+			//CORE-BH-SuspendLog-08+[
+			if (msm_pm_debug_mask & MSM_PM_DEBUG_NOT_MPM_DETECTION)
+			{
+				suspend_log->not_mpm_detect = 1; 
+				suspend_log->not_mpm_duration_threshold = not_mpm_duration_threshold * 32768;
+			}
+			else
+				suspend_log->not_mpm_detect = 0;
+			//CORE-BH-SuspendLog-08+]
+		}
 		else
+		{
 			suspend_log->enable_log = 0;
-	//CORE-BH-SuspendLog-05+]
+			suspend_log->not_mpm_detect = 0; //CORE-BH-SuspendLog-08+
+		}
+	//CORE-BH-SuspendLog-05*]
 	
 	collapsed = msm_pm_spm_power_collapse(cpu, from_idle, true);
 
