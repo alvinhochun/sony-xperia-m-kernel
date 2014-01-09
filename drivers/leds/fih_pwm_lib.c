@@ -20,12 +20,15 @@
 #define FADE_IN_OUT_DURATION 1000 //ms
 
 #define PWM_ERR(fmt, args...) printk(KERN_ERR "[%s][ERR] PWM_LIB_LED : "fmt" \n", __func__, ##args)
-#define PWM_MSG(fmt, args...) printk(KERN_INFO "[%s][MSG] PWM_LIB_LED : "fmt" \n", __func__, ##args)
+#define PWM_WAN(fmt, args...) printk(KERN_WARNING"[%s][WAN] PWM_LIB_LED : "fmt" \n", __func__, ##args)
+#define PWM_MSG(fmt, args...) printk(KERN_INFO"[%s][MSG] PWM_LIB_LED : "fmt" \n", __func__, ##args)
 
 //#define PWM_FIH_DEBUG
 #ifdef PWM_FIH_DEBUG
+#define PWM_IFO(fmt, args...) printk(KERN_INFO"[%s][IFO] PWM_LIB_LED : "fmt" \n", __func__, ##args)
 #define PWM_DBG(fmt, args...) printk(KERN_DEBUG "[%s][DBG] PWM_LIB_LED : "fmt" \n", __func__, ##args)
 #else
+#define PWM_IFO(fmt, args...)
 #define PWM_DBG(fmt, args...) 
 #endif
 
@@ -233,22 +236,22 @@ led_rgb_write(struct pwm_device *pwm_dev, u8 led_id, u16 addr, int value)
 		return;
 	}
 
-	//PWM_DBG("BJ::1,val=0x%x, led_id=%d", val, led_id);
+	//PWM_IFO("val=0x%x, led_id=%d", val, led_id);
 
 	switch (led_id) {
 	case PM8XXX_ID_RGB_LED_RED:
 		mask = PM8XXX_DRV_RGB_RED_LED;
-		//PWM_DBG("BJ::PM8XXX_DRV_RGB_RED_LED");
+		//PWM_IFO("PM8XXX_DRV_RGB_RED_LED");
 
 		break;
 	case PM8XXX_ID_RGB_LED_GREEN:
 		mask = PM8XXX_DRV_RGB_GREEN_LED;
-		//PWM_DBG("BJ::PM8XXX_DRV_RGB_GREEN_LED");
+		//PWM_IFO("PM8XXX_DRV_RGB_GREEN_LED");
 
 		break;
 	case PM8XXX_ID_RGB_LED_BLUE:
 		mask = PM8XXX_DRV_RGB_BLUE_LED;
-		//PWM_DBG("BJ::PM8XXX_DRV_RGB_BLUE_LED");
+		//PWM_IFO("PM8XXX_DRV_RGB_BLUE_LED");
 		break;
 	default:
 		return;
@@ -265,28 +268,28 @@ led_rgb_write(struct pwm_device *pwm_dev, u8 led_id, u16 addr, int value)
 		 {
 			case RGB_12mA:
 				val &= 0xFC;
-				//PWM_DBG("BJ::SSBI_REG_ADDR_RGB_TEST:RGB_12MA, led_id=%d", led_id);
+				//PWM_IFO("SSBI_REG_ADDR_RGB_TEST:RGB_12MA, led_id=%d", led_id);
 				break;
 			case RGB_8mA:
 				val &= 0xFC;
 				val |= 0x1;
-				//PWM_DBG("BJ::SSBI_REG_ADDR_RGB_TEST:RGB_8MA, led_id=%d", led_id);
+				//PWM_IFO("SSBI_REG_ADDR_RGB_TEST:RGB_8MA, led_id=%d", led_id);
 				break;
 			case RGB_4mA:
 				val &= 0xFC;
 				val |= 0x2;
-				//PWM_DBG("BJ::SSBI_REG_ADDR_RGB_TEST:RGB_4MA, led_id=%d", led_id);
+				//PWM_IFO("SSBI_REG_ADDR_RGB_TEST:RGB_4MA, led_id=%d", led_id);
 				break;
 			default:
 				val &= 0xFC;
 				val |= 0x2;
-				//PWM_DBG("BJ::SSBI_REG_ADDR_RGB_TEST:Default, led_id=%d", led_id);
+				//PWM_IFO("SSBI_REG_ADDR_RGB_TEST:Default, led_id=%d", led_id);
 				break;
 		}
 	}
 //PERI-BJ-SetCurrent-00+}
 
-	//PWM_DBG("BJ::2,val=0x%x, led_id=%d", val, led_id);
+	//PWM_IFO("val=0x%x, led_id=%d", val, led_id);
 
 
 	rc = pm8xxx_writeb(pwm_dev->chip->dev->parent, addr, val);
@@ -307,10 +310,10 @@ led_rgb_set_ctl7_default(struct pwm_device *pwm_dev)
 		PWM_ERR("pm8xxx_writeb(): rc=%d (Select PWM Bank), pwm_dev->pwm_id=%d\n", rc,pwm_dev->pwm_id);
 
 //	rc = pm8xxx_readb(pwm_dev->chip->dev->parent, SSBI_REG_ADDR_LPG_BANK_SEL, &val);
-//	PWM_MSG("BJ1, val=0x%x", val);
+//	PWM_MSG("val=0x%x", val);
 
 //	rc = pm8xxx_readb(pwm_dev->chip->dev->parent, addr, &val);
-//	PWM_MSG("BJ2, val=0x%x", val);
+//	PWM_MSG("val=0x%x", val);
 
 	rc = pm8xxx_writeb(pwm_dev->chip->dev->parent, addr, 0x0);
 	if (rc < 0)
@@ -385,19 +388,19 @@ static int configure_hw_pin(struct pwm_device *pwm_dev, int on_off, struct led_p
 			switch (pmic_data->lpg_out)
 			{
 				case PM_LPG_OUT4:
-					PWM_DBG("PM_LPG_OUT4:%d, %d",pmic_data->current_sink,on_off);
+					PWM_IFO("PM_LPG_OUT4:%d, %d",pmic_data->current_sink,on_off);
 					led_rgb_write(pwm_dev,PM8XXX_ID_RGB_LED_BLUE, SSBI_REG_ADDR_RGB_CNTL1, on_off? MAX_LC_LED_BRIGHTNESS:0);
 					led_rgb_write(pwm_dev,PM8XXX_ID_RGB_LED_BLUE, SSBI_REG_ADDR_RGB_CNTL2, on_off? MAX_LC_LED_BRIGHTNESS:0);
 					led_rgb_write(pwm_dev,PM8XXX_ID_RGB_LED_BLUE, SSBI_REG_ADDR_RGB_TEST, pmic_data->current_sink);
 					break;
 				case PM_LPG_OUT5:
-					PWM_DBG("PM_LPG_OUT5:%d, %d",pmic_data->current_sink, on_off);
+					PWM_IFO("PM_LPG_OUT5:%d, %d",pmic_data->current_sink, on_off);
 					led_rgb_write(pwm_dev,PM8XXX_ID_RGB_LED_GREEN, SSBI_REG_ADDR_RGB_CNTL1, on_off? MAX_LC_LED_BRIGHTNESS:0);
 					led_rgb_write(pwm_dev,PM8XXX_ID_RGB_LED_GREEN, SSBI_REG_ADDR_RGB_CNTL2, on_off? MAX_LC_LED_BRIGHTNESS:0);
 					led_rgb_write(pwm_dev,PM8XXX_ID_RGB_LED_GREEN, SSBI_REG_ADDR_RGB_TEST, pmic_data->current_sink);
 					break;
 				case PM_LPG_OUT6:
-					PWM_DBG("PM_LPG_OUT6:%d, %d",pmic_data->current_sink, on_off);
+					PWM_IFO("PM_LPG_OUT6:%d, %d",pmic_data->current_sink, on_off);
 					led_rgb_write(pwm_dev,PM8XXX_ID_RGB_LED_RED, SSBI_REG_ADDR_RGB_CNTL1, on_off? MAX_LC_LED_BRIGHTNESS:0);
 					led_rgb_write(pwm_dev,PM8XXX_ID_RGB_LED_RED, SSBI_REG_ADDR_RGB_CNTL2, on_off? MAX_LC_LED_BRIGHTNESS:0);
 					led_rgb_write(pwm_dev,PM8XXX_ID_RGB_LED_RED, SSBI_REG_ADDR_RGB_TEST, pmic_data->current_sink);
@@ -993,35 +996,94 @@ int led_config_pwm_period(struct pwm_device *pwm_dev, struct led_pmic_data *pmic
 }
 #endif
 
+//PERI-BJ-Implement_new_algo_for_fade_in_out-00+{
+static void cal_component_val(int size, int ramp_up_percentage_size, int raw_percent, int *cX, int *cY)
+{
+	PWM_DBG("raw_percent = %d, size = %d, ramp_up_percentage_size = %d ", raw_percent, size, ramp_up_percentage_size);
+
+	//special case:raw_percent - size <= 0
+	if(raw_percent - size <= 0){
+		*cX = raw_percent;
+		*cY = size - raw_percent;
+		return;
+	}
+
+	//ramp_up_percentage_size can't equal or less than 0
+	if(ramp_up_percentage_size <= 0){
+		PWM_ERR("ramp_up_percentage_size <= 0");
+		return;
+	}
+
+	if(raw_percent == size * ramp_up_percentage_size){
+		//special case:raw_percent == size * ramp_up_percentage_size
+
+		if(ramp_up_percentage_size - 1 == 0){
+			//Here, ramp_up_percentage_size - 1 == 0 is imposible
+			PWM_ERR("ramp_up_percentage_size - 1 == 0");
+			return;
+		}
+
+		*cY = (raw_percent - size) / (ramp_up_percentage_size - 1);
+	}
+	else
+		*cY = (raw_percent - size) / ramp_up_percentage_size;
+
+	*cX = size - *cY;
+
+	return;
+}
+//PERI-BJ-Implement_new_algo_for_fade_in_out-00+}
+
 void set_led_lut_table(struct pwm_device *pwm_dev, struct led_pmic_data *pmic_data, int selection)
 {
+//PERI-BJ-Implement_new_algo_for_fade_in_out-00*{
 	int ramp_up_percentage_size = 0;
+	int raw_percent = 0;
 	int index = 0;
+	int index_cX = 0;
+	int lut_table_length = 0;
+
+	//cX * (n * cY)
+	int cX = 0;
+	int cY = 0;
 
 	PWM_DBG("cal_each_ramp_size");
-//MTD-SW3-PERIPHERAL-OH-LED_Porting-02+{
+	lut_table_length = pmic_data->lut_table_end - pmic_data->lut_table_start + 1;
 	/*Calculate lut table values*/
-	ramp_up_percentage_size = cal_each_ramp_size(pmic_data->lut_table_end - pmic_data->lut_table_start - 1,
-												 pmic_data->fade_in_out_pwm);
+	ramp_up_percentage_size = cal_each_ramp_size( lut_table_length - 2, pmic_data->fade_in_out_pwm);
+	raw_percent = cal_brightness_percentage(pmic_data->fade_in_out_pwm);
+	PWM_DBG("pmic_data->fade_in_out_pwm=%d, ramp_up_percentage_size = %d, raw_percent =%d", 
+			pmic_data->fade_in_out_pwm, ramp_up_percentage_size, raw_percent);
+
+	cal_component_val(lut_table_length - 2, ramp_up_percentage_size, raw_percent, &cX, &cY);
+	PWM_DBG("cX = %d, cY =%d", cX, cY);
+
+#if 0
+	//PERI-BJ-Improve_Fade_in_out_effect-00+{
+
+	if(ramp_up_percentage_size <= 0 && pmic_data->fade_in_out_pwm > 0)
+		ramp_up_percentage_size = 1;
+
+	PWM_DBG("modified ramp_up_percentage_size = %d", ramp_up_percentage_size );
+	//PERI-BJ-Improve_Fade_in_out_effect-00+}
+
+#endif
 
 	if (pmic_data->invert)
 	{
 		local_pwm_lut_table_diff[selection][0] = 100;
-		local_pwm_lut_table_diff[selection][pmic_data->lut_table_end - pmic_data->lut_table_start] = 
-									100 - cal_brightness_percentage(pmic_data->fade_in_out_pwm);
+		local_pwm_lut_table_diff[selection][lut_table_length - 1] = 100 - raw_percent;
 	}
 	else
 	{
 		local_pwm_lut_table_diff[selection][0] = 0;
-		local_pwm_lut_table_diff[selection][pmic_data->lut_table_end - pmic_data->lut_table_start] = 
-									cal_brightness_percentage(pmic_data->fade_in_out_pwm);
+		local_pwm_lut_table_diff[selection][lut_table_length - 1] = raw_percent;
 	}
-
-	PWM_DBG("lut table");
 
 	PWM_DBG("local_pwm_lut_table_diff[selection][0], value = %d", local_pwm_lut_table_diff[selection][0]);
 
-	for (index = 1; index < (pmic_data->lut_table_end - pmic_data->lut_table_start); index ++)
+#if 0
+	for (index = 1; index < lut_table_length - 1; index ++)
 	{
 		/* assign value to loop up table for fade in/out */
 		local_pwm_lut_table_diff[selection][index] = index * ramp_up_percentage_size;
@@ -1039,6 +1101,68 @@ void set_led_lut_table(struct pwm_device *pwm_dev, struct led_pmic_data *pmic_da
 			PWM_DBG("invert local_pwm_lut_table_diff[selection][%d] = %d", index, local_pwm_lut_table_diff[selection][index]);
 		}
 	}
+
+#endif 
+
+	if(ramp_up_percentage_size <= 0 && pmic_data->fade_in_out_pwm > 0){
+		ramp_up_percentage_size = 0;
+	}
+	else
+	{
+		if(raw_percent != (lut_table_length - 2) * ramp_up_percentage_size)
+			ramp_up_percentage_size+=1;
+	}
+
+	for (index = 1; index <= cY; index ++)
+	{
+		/* assign value to loop up table for fade in/out */
+		local_pwm_lut_table_diff[selection][index] = index * ramp_up_percentage_size;
+
+		/* if value is out of range, re-assign max value as our PWM control*/
+		if (local_pwm_lut_table_diff[selection][index] > 100)
+			local_pwm_lut_table_diff[selection][index]	= 100;
+
+		PWM_DBG("local_pwm_lut_table_diff[selection][%d], value = %d", index, local_pwm_lut_table_diff[selection][index]);
+
+		/*Check if we need to invert*/
+		if (pmic_data->invert)
+		{
+			local_pwm_lut_table_diff[selection][index] = 100 -	local_pwm_lut_table_diff[selection][index];
+			PWM_DBG("invert local_pwm_lut_table_diff[selection][%d] = %d", index, local_pwm_lut_table_diff[selection][index]);
+		}
+	}
+
+	for (index_cX = 1; index_cX <= cX && index <= lut_table_length - 1 ; index_cX ++, index++)
+	{
+		/* assign value to loop up table for fade in/out */
+		local_pwm_lut_table_diff[selection][index] = cY * ramp_up_percentage_size + index_cX * ((pmic_data->fade_in_out_pwm == 0)? 0: 1);
+
+		/* if value is out of range, re-assign max value as our PWM control*/
+		if (local_pwm_lut_table_diff[selection][index] > 100)
+			local_pwm_lut_table_diff[selection][index] = 100;
+
+		PWM_DBG("local_pwm_lut_table_diff[selection][%d], value = %d", index, local_pwm_lut_table_diff[selection][index]);
+
+		/*Check if we need to invert*/
+		if (pmic_data->invert)
+		{
+			local_pwm_lut_table_diff[selection][index] = 100 -	local_pwm_lut_table_diff[selection][index];
+			PWM_DBG("invert local_pwm_lut_table_diff[selection][%d] = %d", index, local_pwm_lut_table_diff[selection][index]);
+		}
+	}
+//PERI-BJ-Implement_new_algo_for_fade_in_out-00*}
+
+//PERI-BJ-Improve_Fade_in_out_effect-00+{
+	PWM_DBG("local_pwm_lut_table_diff[selection][%d], value = %d", index, local_pwm_lut_table_diff[selection][index]);
+
+	//make sure the last lut table item would have the max value
+	if(local_pwm_lut_table_diff[selection][index] < local_pwm_lut_table_diff[selection][index-1])
+		local_pwm_lut_table_diff[selection][index] = local_pwm_lut_table_diff[selection][index-1];
+
+	PWM_DBG("modified local_pwm_lut_table_diff[selection][%d], value = %d", index, local_pwm_lut_table_diff[selection][index]);
+//PERI-BJ-Improve_Fade_in_out_effect-00+}
+
+	
 }
 
 //MTD-SW3-PERIPHERAL-BJ-LED_FADE_IN_OUT_DIFF-00*{
@@ -1093,13 +1217,10 @@ static int pmic_gpio_led_fade_on_diff(struct pwm_device *pwm_dev_r, struct led_p
 		pmic_data_r->lut_table_end=63;
 	}
 
-
 	set_led_lut_table(pwm_dev_r,pmic_data_r,0);
 	set_led_lut_table(pwm_dev_g,pmic_data_g,1);
 	set_led_lut_table(pwm_dev_b,pmic_data_b,2);
 
-	//PWM_DBG("local_pwm_lut_table[%d], value = %d", pmic_data->lut_table_end - pmic_data->lut_table_start,
-//								local_pwm_lut_table[pmic_data->lut_table_end - pmic_data->lut_table_start]);
 	/*Setup flags*/
 	if (pmic_data_r->ramp_loop)
 	{	
@@ -1118,7 +1239,7 @@ static int pmic_gpio_led_fade_on_diff(struct pwm_device *pwm_dev_r, struct led_p
 
 	//flags |= (PM_PWM_LUT_PAUSE_HI_EN | PM_PWM_LUT_PAUSE_LO_EN);
 
-	PWM_DBG("PWM control flags = 0x%02X ", flags);
+	PWM_IFO("PWM control flags = 0x%02X ", flags);
 
 
 	//To match the timing more accurate, we need to customize the settings.
@@ -1219,7 +1340,7 @@ static int pmic_gpio_led_fade_on_diff(struct pwm_device *pwm_dev_r, struct led_p
 	}
 
 
-	PWM_DBG("configure_hw_pin");
+	PWM_IFO("configure_hw_pin");
 	/*Configure hw related pin*/
 	ret = configure_hw_pin(pwm_dev_r, 1, pmic_data_r); //MTD-SW3-PERIPHERAL-BJ-LED_Porting-00+
 	if (ret)
@@ -1239,7 +1360,7 @@ static int pmic_gpio_led_fade_on_diff(struct pwm_device *pwm_dev_r, struct led_p
 		PWM_ERR("config IO error, ret = %d", ret);
 	}
 
-	PWM_DBG("pm8xxx_pwm_lut_enable");
+	PWM_IFO("pm8xxx_pwm_lut_enable");
 
 	/*Start fade in/out*/
 	ret = pm8xxx_pwm_lut_enable(pwm_dev_r, 1);
@@ -1277,7 +1398,7 @@ int common_control_leds(struct pwm_device *pwm_dev, struct led_pmic_data *pmic_d
 	int index = 0;
 	led_functions this_led_functions;
 
-	//PWM_MSG("Enter");
+	//PWM_DBG("Enter");
 
 	if (pwm_dev == NULL || pmic_data == NULL)
 	{
@@ -1345,11 +1466,11 @@ int common_control_leds(struct pwm_device *pwm_dev, struct led_pmic_data *pmic_d
 
 	#ifdef Config_LED_PM8038_FIH
 	/* init LPG channel with PWM channel for LPG4~LPG6 */
-	//PWM_MSG("%s, index = %d ", __func__, index);
+	//PWM_IFO("%s, index = %d ", __func__, index);
 	if(!index){
 		if (pmic_data->hardware == LED_HW_PMIC_LPG)
 		{
-			//PWM_MSG("%s,LED_HW_PMIC_LPG",__func__);
+			//PWM_IFO("%s,LED_HW_PMIC_LPG",__func__);
 		
 			switch (pmic_data->lpg_out)
 			{
@@ -1433,7 +1554,7 @@ int control_fade_nonsync_leds(struct pwm_device *pwm_dev_r, struct led_pmic_data
 	/*Parse which action (fade/blinking/on)*/
 	if (pmic_data_r->control || pmic_data_g->control || pmic_data_b->control)
 	{//on
-		PWM_DBG("control_fade_nonsync_leds:ON");
+		PWM_IFO("control_fade_nonsync_leds:ON");
 		ret = pmic_gpio_led_fade_on_diff(pwm_dev_r, pmic_data_r,pwm_dev_g, pmic_data_g,pwm_dev_b, pmic_data_b);
 		
 		if (ret)
@@ -1444,7 +1565,7 @@ int control_fade_nonsync_leds(struct pwm_device *pwm_dev_r, struct led_pmic_data
 	}
 	else
 	{//off
-		PWM_DBG("control_fade_nonsync_leds:OFF");
+		PWM_IFO("control_fade_nonsync_leds:OFF");
 		ret = pmic_gpio_led_fade_off(pwm_dev_r, pmic_data_r);
 		if (ret)
 		{

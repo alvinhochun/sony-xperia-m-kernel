@@ -684,17 +684,19 @@ static struct gpio fih_back_cam_gpio[] = {
 //MM-MC-BringUpCameraRawSensorS5k4e1-00+}
 };
 
-static struct msm_gpio_set_tbl fih_front_cam_gpio_set_tbl[] = {
 //MM-MC-BringUpFrontCameraMT9V115-00+{
+//MM-UW-fix Camera switch fail-00+{
+static struct msm_gpio_set_tbl fih_front_cam_gpio_set_tbl[] = {
 #if defined(CONFIG_MT9V115) || defined(CONFIG_HM03D5)//MM-MC-BringUpCameraYUVSensorForHM03D5-00+
     //Init all VGA pins
     {77, GPIOF_OUT_INIT_LOW, 0},
     {76, GPIOF_OUT_INIT_LOW, 0},
     {96, GPIOF_OUT_INIT_LOW, 100},
     //Power on
-    {96, GPIOF_OUT_INIT_HIGH, 1},
-    {76, GPIOF_OUT_INIT_HIGH, 500},
+    {96, GPIOF_OUT_INIT_HIGH, 20000},
+    {76, GPIOF_OUT_INIT_HIGH, 1000},
 #endif
+//MM-UW-fix Camera switch fail-00+}
 //MM-MC-BringUpFrontCameraMT9V115-00+}
 };
 
@@ -715,6 +717,24 @@ static struct msm_gpio_set_tbl fih_back_cam_gpio_set_tbl[] = {
 #endif
 //MM-MC-BringUpCameraRawSensorS5k4e1-00+}
 };
+
+//MM-MC-ModifyPowerOnSequenceForAr0543-00+{
+static struct msm_gpio_set_tbl fih_back_2nd_cam_gpio_set_tbl[] = {
+#if defined(CONFIG_AR0543)
+    {77, GPIOF_OUT_INIT_HIGH, 10000},
+    //Init all 5M pins
+    {93, GPIOF_OUT_INIT_LOW, 0},
+    {95, GPIOF_OUT_INIT_LOW, 0},
+    {76, GPIOF_OUT_INIT_LOW, 0},
+    {96, GPIOF_OUT_INIT_LOW, 10000},
+    //Power on
+    {96, GPIOF_OUT_INIT_HIGH, 0},
+    {93, GPIOF_OUT_INIT_HIGH, 1000},
+    {76, GPIOF_OUT_INIT_HIGH, 0},
+    {95, GPIOF_OUT_INIT_HIGH, 10},
+#endif
+};
+//MM-MC-ModifyPowerOnSequenceForAr0543-00+}
 
 static struct msm_camera_gpio_conf fih_front_cam_gpio_conf = {
 	.cam_gpiomux_conf_tbl = msm8930_cam_2d_configs,
@@ -737,6 +757,19 @@ static struct msm_camera_gpio_conf fih_back_cam_gpio_conf = {
 	.cam_gpio_set_tbl = fih_back_cam_gpio_set_tbl,
 	.cam_gpio_set_tbl_size = ARRAY_SIZE(fih_back_cam_gpio_set_tbl),
 };
+
+//MM-MC-ModifyPowerOnSequenceForAr0543-00+{
+static struct msm_camera_gpio_conf fih_back_2nd_cam_gpio_conf = {
+	.cam_gpiomux_conf_tbl = msm8930_cam_2d_configs,
+	.cam_gpiomux_conf_tbl_size = ARRAY_SIZE(msm8930_cam_2d_configs),
+	.cam_gpio_common_tbl = fih_common_cam_gpio,
+	.cam_gpio_common_tbl_size = ARRAY_SIZE(fih_common_cam_gpio),
+	.cam_gpio_req_tbl = fih_back_cam_gpio,
+	.cam_gpio_req_tbl_size = ARRAY_SIZE(fih_back_cam_gpio),
+	.cam_gpio_set_tbl = fih_back_2nd_cam_gpio_set_tbl,
+	.cam_gpio_set_tbl_size = ARRAY_SIZE(fih_back_2nd_cam_gpio_set_tbl),
+};
+//MM-MC-ModifyPowerOnSequenceForAr0543-00+}
 
 //---------------------------------------------------------------------------
 //Flash struct for main camera
@@ -825,7 +858,7 @@ static struct i2c_board_info msm_act_main_cam_fih_1_i2c_info = {
 
 static struct msm_actuator_info msm_act_main_cam_fih_1_info = {
 	.board_info     = &msm_act_main_cam_fih_1_i2c_info,
-	.cam_name       = MSM_ACTUATOR_MAIN_CAM_FIH_7,
+	.cam_name       = MSM_ACTUATOR_MAIN_CAM_FIH_8, //MM-UW-update AF driver+{
 	.bus_id         = MSM_8930_GSBI4_QUP_I2C_BUS_ID,
 	.vcm_pwd        = 54,//CAM_VCM_PWDN pin
 	.vcm_enable     = 1,//Enable if use HW PWDN pin
@@ -875,7 +908,7 @@ static struct msm_camera_sensor_platform_info sensor_board_info_ar0543 = {
 	.mount_angle	= 90,
 	.cam_vreg	= msm_8930_ar0543_vreg,
 	.num_vreg	= ARRAY_SIZE(msm_8930_ar0543_vreg),
-	.gpio_conf	= &fih_back_cam_gpio_conf,
+	.gpio_conf	= &fih_back_2nd_cam_gpio_conf,//MM-MC-ModifyPowerOnSequenceForAr0543-00*
 	.csi_lane_params = &ar0543_csi_lane_params,
 };
 

@@ -540,15 +540,23 @@ int32_t hm03d5_power_up(struct msm_sensor_ctrl_t *s_ctrl)
 			goto enable_clk_failed;
 		}
 	}
+       //MM-UW-fix Camera switch fail-00+{
+       msleep(3);
+       gpio_set_value_cansleep(77, 1);
 
-	if (!s_ctrl->power_seq_delay)
+       msleep(15);
+       gpio_set_value_cansleep(77, 0); 
+
+       msleep(5);
+
+	/*if (!s_ctrl->power_seq_delay)
 		usleep_range(1000, 2000);
 	else if (s_ctrl->power_seq_delay < 20)
 		usleep_range((s_ctrl->power_seq_delay * 1000),
 			((s_ctrl->power_seq_delay * 1000) + 1000));
 	else
-		msleep(s_ctrl->power_seq_delay);
-
+		msleep(s_ctrl->power_seq_delay);*/
+       //MM-UW-fix Camera switch fail-00+}
 	if (data->sensor_platform_info->ext_power_ctrl != NULL)
 		data->sensor_platform_info->ext_power_ctrl(1);
 

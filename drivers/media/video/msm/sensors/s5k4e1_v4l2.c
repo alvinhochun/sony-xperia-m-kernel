@@ -1335,10 +1335,14 @@ static int32_t s5k4e1_write_prev_exp_gain(struct msm_sensor_ctrl_t *s_ctrl,
 	if (line > (s_ctrl->curr_frame_length_lines - offset)) {
 		fl_lines = line + offset;
 		s_ctrl->func_tbl->sensor_group_hold_on(s_ctrl);
+			  /* MM-SL-FixMMSCantNotRecord23s-00*{ */
               /* MM-UW-Fix MMS can't record 23s-00+{ */
-              if(s_ctrl->fps_divider > 2000)
+              if(s_ctrl->fps_divider > 2000){
                  fl_lines = fl_lines * 23/10;  /*let fps lower than 15*/
+				 line = line * 23/10;
+              }
               /* MM-UW-Fix MMS can't record 23s-00+} */
+			  /* MM-SL-FixMMSCantNotRecord23s-00*} */
 		msm_camera_i2c_write(s_ctrl->sensor_i2c_client,
 			s_ctrl->sensor_output_reg_addr->frame_length_lines,
 			s5k4e1_byte(fl_lines, MSB),
@@ -1360,11 +1364,15 @@ static int32_t s5k4e1_write_prev_exp_gain(struct msm_sensor_ctrl_t *s_ctrl,
 	} else if (line < (fl_lines - offset)) {
 		fl_lines = line + offset; 
 		if (fl_lines < s_ctrl->curr_frame_length_lines)
-			fl_lines = s_ctrl->curr_frame_length_lines;  
+			fl_lines = s_ctrl->curr_frame_length_lines;
+			  /* MM-SL-FixMMSCantNotRecord23s-00*{ */
               /* MM-UW-Fix MMS can't record 23s-00+{ */
-              if(s_ctrl->fps_divider > 2000)
+              if(s_ctrl->fps_divider > 2000){
                  fl_lines = fl_lines * 23/10;  /*let fps lower than 15*/
+			     line = line * 23/10;
+			  }
               /* MM-UW-Fix MMS can't record 23s-00+} */
+			  /* MM-SL-FixMMSCantNotRecord23s-00*} */
 		s_ctrl->func_tbl->sensor_group_hold_on(s_ctrl);
 		/* Coarse Integration Time */
 		msm_camera_i2c_write(s_ctrl->sensor_i2c_client,

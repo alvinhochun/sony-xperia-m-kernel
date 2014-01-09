@@ -20,9 +20,8 @@ typedef enum
 	PHASE_PreAP = 45,
 	PHASE_AP = 50,
 	PHASE_TP = 60,
-	PHASE_TP2 = 65,
 	PHASE_PQ = 70,
-	PHASE_MP = 80,
+	PHASE_TP2_MP = 80,
 	PHASE_ANY = 0XFE,
 	PHASE_MAX = 0XFF
 }fih_product_phase_type;

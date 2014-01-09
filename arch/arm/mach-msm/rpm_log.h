@@ -129,6 +129,11 @@ typedef struct  suspend_log_def
 	u32 mpm_wakeup_pending_int_status2; //Pending MPM wakeup interrupt status2
 
 	u16 vdd_dig_sleep_voltage_mv; //CORE-BH-SuspendLog-07+
+
+	//CORE-BH-SuspendLog-08+[
+	u8 not_mpm_detect; //Trigger ramdump when not mpn too long
+	u32 not_mpm_duration_threshold; //not mpm duration in SCLK for not_mpm_dectect
+	//CORE-BH-SuspendLog-08+]
 }rpm_suspend_log;
 //MTD-SD1-Power-BH-SuspendLog+]
 

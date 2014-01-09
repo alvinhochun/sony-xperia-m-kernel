@@ -43,6 +43,37 @@
 
 static DEFINE_MUTEX(msm_bus_lock);
 
+/*CORE-SC-system-stability-01+[CR#459651*/
+/* This function uses shift operations to divide 64 bit value for higher
+ * efficiency. The divisor expected are number of ports or bus-width.
+ * These are expected to be 1, 2, 4, 8, 16 and 32 in most cases.
+ *
+ * To account for exception to the above divisor values, the standard
+ * do_div function is used.
+ * */
+uint64_t msm_bus_div64(unsigned int w, uint64_t bw)
+{
+	uint64_t *b = &bw;
+
+	if ((bw > 0) && (bw < w))
+		return 1;
+
+	switch (w) {
+	case 0:
+		WARN(1, "AXI: Divide by 0 attempted\n");
+	case 1: return bw;
+	case 2:	return (bw >> 1);
+	case 4:	return (bw >> 2);
+	case 8:	return (bw >> 3);
+	case 16: return (bw >> 4);
+	case 32: return (bw >> 5);
+	}
+
+	do_div(*b, w);
+	return *b;
+}
+/*CORE-SC-system-stability-01+]CR#459651*/
+
 /**
  * add_path_node: Adds the path information to the current node
  * @info: Internal node info structure
@@ -378,8 +409,18 @@ static int update_path(int curr, int pnode, unsigned long req_clk, unsigned
 			req_clk);
 		bwsum_hz = BW_TO_CLK_FREQ_HZ(hop->node_info->buswidth,
 			bwsum);
-		MSM_BUS_DBG("Calling update-clks: curr_hz: %lu, req_hz: %lu,"
-			" bw_hz %u\n", curr_clk, req_clk, bwsum_hz);
+/*CORE-SC-system-stability-01+[CR#459651*/
+		/* Account for multiple channels if any */
+		if (hop->node_info->num_sports > 1)
+			bwsum_hz = msm_bus_div64(hop->node_info->num_sports,
+				bwsum_hz);
+		MSM_BUS_DBG("AXI: Hop: %d, ports: %d, bwsum_hz: %u\n",
+				hop->node_info->id, hop->node_info->num_sports,
+				bwsum_hz);
+		MSM_BUS_DBG("up-clk: curr_hz: %lu, req_hz: %lu, bw_hz %u\n",
+			curr_clk, req_clk, bwsum_hz);
+/*CORE-SC-system-stability-01+]CR#459651*/
+
 		ret = fabdev->algo->update_clks(fabdev, hop, index,
 			curr_clk_hz, req_clk_hz, bwsum_hz, SEL_FAB_CLK,
 			ctx, cl_active_flag);
@@ -546,6 +587,12 @@ int msm_bus_scale_client_update_request(uint32_t cl, unsigned index)
 
 	curr = client->curr;
 	pdata = client->pdata;
+/*CORE-SC-system-stability-01+[CR#458264*/
+	if (!pdata) {
+		MSM_BUS_ERR("Null pdata passed to update-request\n");
+		return -ENXIO;
+	}
+/*CORE-SC-system-stability-01+]CR#458264*/
 
 	if (index >= pdata->num_usecases) {
 		MSM_BUS_ERR("Client %u passed invalid index: %d\n",
@@ -586,6 +633,17 @@ int msm_bus_scale_client_update_request(uint32_t cl, unsigned index)
 			curr_bw = client->pdata->usecase[curr].vectors[i].ab;
 			MSM_BUS_DBG("ab: %lu ib: %lu\n", curr_bw, curr_clk);
 		}
+
+/*CORE-SC-system-stability-01+[ CR# 407057*/
+		if (index == 0) {
+			/* This check protects the bus driver from clients
+			 * that can leave non-zero requests after
+			 * unregistering.
+			 * */
+			req_clk = 0;
+			req_bw = 0;
+		}
+/*CORE-SC-system-stability-01+]CR# 407057*/
 
 		if (!pdata->active_only) {
 			ret = update_path(src, pnode, req_clk, req_bw,
@@ -682,7 +740,7 @@ void msm_bus_scale_client_reset_pnodes(uint32_t cl)
 {
 	int i, src, pnode, index;
 	struct msm_bus_client *client = (struct msm_bus_client *)(cl);
-	if (IS_ERR(client)) {
+	if (IS_ERR_OR_NULL(client)) { /*CORE-SC-system-stability-01*CR#458264*/
 		MSM_BUS_ERR("msm_bus_scale_reset_pnodes error\n");
 		return;
 	}
@@ -703,7 +761,7 @@ void msm_bus_scale_client_reset_pnodes(uint32_t cl)
 void msm_bus_scale_unregister_client(uint32_t cl)
 {
 	struct msm_bus_client *client = (struct msm_bus_client *)(cl);
-	if (IS_ERR(client) || (!client))
+	if (IS_ERR_OR_NULL(client)) /*CORE-SC-system-stability-01*CR#458264*/
 		return;
 	if (client->curr != 0)
 		msm_bus_scale_client_update_request(cl, 0);

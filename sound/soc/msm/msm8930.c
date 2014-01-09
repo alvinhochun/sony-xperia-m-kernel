@@ -42,7 +42,7 @@
 #define DEFAULT_PMIC_SPK_GAIN 0x0D
 #define SITAR_EXT_CLK_RATE 12288000
 
-#define SITAR_MBHC_DEF_BUTTONS 8
+#define SITAR_MBHC_DEF_BUTTONS 4 /* MM-AY-NIKDS03283-00-- */
 #define SITAR_MBHC_DEF_RLOADS 5
 
 #define GPIO_AUX_PCM_DOUT 63
@@ -175,6 +175,7 @@ static void msm8960_ext_spk_power_amp_on(u32 spk)
 				 * hence the GPIO enable for speaker boost is
 				 * only required for platforms other than CDP
 				 */
+				#if 0
 				if (!machine_is_msm8930_cdp()) {
 					ret = msm8930_cfg_spkr_gpio(
 					  SPKR_BOOST_GPIO, 1, "SPKR_BOOST");
@@ -184,6 +185,7 @@ static void msm8960_ext_spk_power_amp_on(u32 spk)
 						return;
 					}
 				}
+				#endif
 				pm8xxx_spk_enable(MSM8930_SPK_ON);
 			}
 
@@ -212,12 +214,14 @@ static void msm8960_ext_spk_power_amp_off(u32 spk)
 			return;
 		}
 
+		#if 0
 		if (!machine_is_msm8930_cdp()) {
 			pr_debug("%s: Free speaker boost gpio %u\n",
 					__func__, SPKR_BOOST_GPIO);
 			gpio_direction_output(SPKR_BOOST_GPIO, 0);
 			gpio_free(SPKR_BOOST_GPIO);
 		}
+		#endif
 
 		pm8xxx_spk_enable(MSM8930_SPK_OFF);
 		msm8930_ext_spk_pamp = 0;
@@ -583,6 +587,8 @@ static void *def_sitar_mbhc_cal(void)
 	btn_high[2] = 400;/*SW-MM-RC-MBHC-01*/
 	btn_low[3] = 401;/*SW-MM-RC-MBHC-01*/
 	btn_high[3] = 700;/*SW-MM-RC-MBHC-01*/
+/* MM-AY-NIKDS03283-00-[+ */
+#if 0
 	btn_low[4] = 701;/*SW-MM-RC-MBHC-01*/
 	btn_high[4] = 800;/*SW-MM-RC-MBHC-01*/
 	btn_low[5] = 801;/*SW-MM-RC-MBHC-01*/
@@ -591,6 +597,8 @@ static void *def_sitar_mbhc_cal(void)
 	btn_high[6] = 1000;/*SW-MM-RC-MBHC-01*/
 	btn_low[7] = 1001;/*SW-MM-RC-MBHC-01*/
 	btn_high[7] = 1100;/*SW-MM-RC-MBHC-01*/
+#endif
+/* MM-AY-NIKDS03283-00-]- */
 	n_ready = sitar_mbhc_cal_btn_det_mp(btn_cfg, SITAR_BTN_DET_N_READY);
 	n_ready[0] = 48;
 	n_ready[1] = 38;

@@ -679,8 +679,6 @@ static int64_t pm8xxx_adc_scale_ratiometric_calib(int32_t adc_code,
 
 int64_t ext_bat_voltage, ext_sys_voltage;
 
-extern void machine_power_off(void);
-
 int32_t pm8xxx_adc_scale_batt_therm(int32_t adc_code,
 		const struct pm8xxx_adc_properties *adc_properties,
 		const struct pm8xxx_adc_chan_properties *chan_properties,
@@ -695,11 +693,6 @@ int32_t pm8xxx_adc_scale_batt_therm(int32_t adc_code,
 			adc_properties, chan_properties);
 
 	ext_bat_voltage = bat_voltage;
-
-	if (ext_bat_voltage > 1700) {
-		pr_err("[chg %s %d]ERROR!! Battery removed %lld", __func__, __LINE__, ext_bat_voltage);
-		machine_power_off();
-	}
 
 	if (phaseid == 0)
 		phaseid = fih_get_product_phase();

@@ -977,7 +977,7 @@ static ssize_t ps_thd_store(struct device *dev,
 	module_id = simple_strtol(token[1], NULL, 16);
 	code = simple_strtol(token[2], NULL, 16);
 
-	if(((fih_get_product_phase() == PHASE_PQ) && (module_id==2))|| (fih_get_product_phase() >= PHASE_MP) || force)
+	if(((fih_get_product_phase() == PHASE_PQ) && (module_id==2))|| (fih_get_product_phase() >= PHASE_TP2_MP) || force)
 	{
     	D("[PS]%s: store value = 0x%x\n", __func__, code);
     
@@ -1580,7 +1580,7 @@ static int cm36283_probe(struct i2c_client *client,
     lpi->slave_addr = pdata->slave_addr;
 
 /*MTD-PERIPHERAL-CH-PS_conf00++[*/
-if(fih_get_product_phase() >= PHASE_MP)
+if(fih_get_product_phase() >= PHASE_TP2_MP)
 {
 	lpi->ps_away_thd_set = 0x2D;
     lpi->ps_close_thd_set = 0x31;	

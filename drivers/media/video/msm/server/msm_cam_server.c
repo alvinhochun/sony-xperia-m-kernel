@@ -343,7 +343,7 @@ static int msm_server_control(struct msm_cam_server_dev *server_dev,
 				uint32_t id, struct msm_ctrl_cmd *out)
 {
 	int rc = 0;
-	//uint8_t wait_count;/* MM-MC-camera patch for fatal error-00- */
+	//uint8_t wait_count;
 	void *value;
 	struct msm_queue_cmd *rcmd;
 	struct msm_queue_cmd *event_qcmd;
@@ -409,7 +409,7 @@ static int msm_server_control(struct msm_cam_server_dev *server_dev,
 	D("%s v4l2_event_queue: type = 0x%x\n", __func__, v4l2_evt.type);
 	mutex_unlock(&server_dev->server_queue_lock);
 
-    /* MM-MC-camera patch for fatal error-00+{ */
+       /* MM-UW-camera patch for fatal error-00+{ */
 	/* wait for config return status */
 	D("Waiting for config status\n");
 	/* wait event may be interrupted by sugnal,
@@ -426,7 +426,7 @@ static int msm_server_control(struct msm_cam_server_dev *server_dev,
 		/*D("%s: wait_event interrupted by signal, remain_count = %d",
 			__func__, wait_count);*/
 	} while (1);
-    /* MM-MC-camera patch for fatal error-00+{ */
+       /* MM-UW-camera patch for fatal error-00+{ */
     
 	D("Waiting is over for config status\n");
 	if (list_empty_careful(&queue->list)) {

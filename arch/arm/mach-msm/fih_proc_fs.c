@@ -86,17 +86,13 @@ static int phase_id_read_proc(char *page, char **start, off_t off,
         strncpy(ver, "TP", 2);
         ver[2]='\0';
         break;
-    case PHASE_TP2:
-        strncpy(ver, "TP2", 3);
-        ver[3]='\0';
-        break;
     case PHASE_PQ :
         strncpy(ver, "PQ", 2);
         ver[2]='\0';
         break;
-    case PHASE_MP:
-        strncpy(ver, "MP", 2);
-        ver[2]='\0';
+    case PHASE_TP2_MP:
+        strncpy(ver, "TP2_MP", 6);
+        ver[6]='\0';
         break;
     default:
         strncpy(ver, "Unkonwn Baseband version",24);

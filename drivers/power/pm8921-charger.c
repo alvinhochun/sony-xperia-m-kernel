@@ -491,7 +491,7 @@ struct pm8921_chg_chip {
 	bool				iusb_fine_res;
 	bool				disable_hw_clock_switching;
 	DECLARE_BITMAP(enabled_irqs, PM_CHG_MAX_INTS);
-	struct work_struct		battery_id_valid_work;
+	struct work_struct		battery_present_work;
 	int64_t				batt_id_min;
 	int64_t				batt_id_max;
 	int				soc[SOC_MAX_NUM];
@@ -1456,12 +1456,23 @@ static void check_battery_valid(struct pm8921_chg_chip *chip)
 	}
 }
 
-static void battery_id_valid(struct work_struct *work)
+extern void pm8921_bms_battery_removed(void);
+extern void machine_power_off(void);
+
+static void battery_present(struct work_struct *work)
 {
 	struct pm8921_chg_chip *chip = container_of(work,
-				struct pm8921_chg_chip, battery_id_valid_work);
+				struct pm8921_chg_chip, battery_present_work);
+	int status;
 
-	check_battery_valid(chip);
+	status = pm_chg_get_rt_status(chip, BATT_REMOVED_IRQ);
+
+	pr_err("batt_present = %d\n", !status);
+	
+	if (status == 1) {
+		pm8921_bms_battery_removed();
+		machine_power_off();
+	}
 }
 
 static void pm8921_chg_enable_irq(struct pm8921_chg_chip *chip, int interrupt)
@@ -2039,6 +2050,28 @@ static int set_fake_temp_param(const char *val, struct kernel_param *kp)
 }
 module_param_call(fake_temp, set_fake_temp_param, param_get_uint,
 					&fake_temp, 0644);
+
+//CORE-DL-AdbWriteRestartReason-00 +[
+u32 reason;
+void msm_write_restart_reason(u32 reason);
+static int write_restart_reason(const char *val, struct kernel_param *kp)
+{
+	int ret;
+
+	ret = param_set_uint(val, kp);
+	if (ret) {
+		pr_err("error setting value %d\n", ret);
+		return ret;
+	}
+
+	if (reason)
+		msm_write_restart_reason(reason);
+
+	return 0;
+}
+module_param_call(restart_reason, write_restart_reason, NULL,
+					&reason, 0644);
+//CORE-DL-AdbWriteRestartReason-00 +]
 
 static int update_soc(struct pm8921_chg_chip *chip)
 {
@@ -3035,14 +3068,7 @@ static irqreturn_t usbin_valid_irq_handler(int irq, void *data)
 
 static irqreturn_t batt_inserted_irq_handler(int irq, void *data)
 {
-	struct pm8921_chg_chip *chip = data;
-	int status;
-
-	status = pm_chg_get_rt_status(chip, BATT_INSERTED_IRQ);
-	schedule_work(&chip->battery_id_valid_work);
-	handle_start_ext_chg(chip);
-	pr_track("battery present=%d", status);
-	power_supply_changed(&chip->batt_psy);
+	/* this function is not in used */
 	return IRQ_HANDLED;
 }
 
@@ -3420,6 +3446,8 @@ static irqreturn_t batt_removed_irq_handler(int irq, void *data)
 	struct pm8921_chg_chip *chip = data;
 	int status;
 
+	schedule_work(&chip->battery_present_work);
+	
 	status = pm_chg_get_rt_status(chip, BATT_REMOVED_IRQ);
 	pr_track("battery present=%d state=%d", !status,
 					 pm_chg_get_fsm_state(data));
@@ -5056,13 +5084,19 @@ static int pm8921_charger_resume(struct device *dev)
 #endif
 	struct pm8921_chg_chip *chip = dev_get_drvdata(dev);
 
-	pr_track("enter");
+	/*	if we are in charging, the capacity shall be decreased */
+	if (chip->soc[SOC_SMOOTH] > chip->soc[SOC_TRUE]) {
+
+		pr_track("enter sync capacity from %d to %d\n", chip->soc[SOC_SMOOTH], chip->soc[SOC_TRUE]);
+	
+		chip->soc[SOC_SMOOTH] = chip->soc[SOC_TRUE];
+	}
+	else 
+		pr_track("enter\n");
 
 #if (ENABLE_BTM == 1)
 	if (!(chip->cool_temp_dc == INT_MIN && chip->warm_temp_dc == INT_MIN)) {
 
-		pr_err("enter logic");
-		
 		rc = pm8xxx_adc_btm_configure(&btm_config);
 		if (rc)
 			pr_err("couldn't reconfigure btm rc=%d\n", rc);
@@ -5085,13 +5119,11 @@ static int pm8921_charger_suspend(struct device *dev)
 	int rc;
 	struct pm8921_chg_chip *chip = dev_get_drvdata(dev);
 
-	pr_track("enter");
+	pr_track("enter\n");
 
 #if (ENABLE_BTM == 1)
 	if (!(chip->cool_temp_dc == INT_MIN && chip->warm_temp_dc == INT_MIN)) {
 
-		pr_err("enter logic");
-		
 		rc = pm8xxx_adc_btm_end();
 		if (rc)
 			pr_err("Failed to disable BTM on suspend rc=%d\n", rc);
@@ -5143,16 +5175,25 @@ static unsigned int target_get_power_on_reason(void)
 }
 
 //CORE-DL-FixForcePowerOn-00 +[
+
+/* CORE-EL-FixPowerCycle-00*[ */
 bool is_power_off_charging(void)
 {
-	unsigned int	power_on_reason = target_get_power_on_reason();
+	static int saved_power_on_reason = -1;
 
-	pr_track("power_on_reason = %d, is_warmboot = %d \n", power_on_reason, is_warmboot);
-	if ((power_on_reason == PWR_ON_EVENT_USB_CHG) && (is_warmboot == 0))
-		return true;
-	else
-		return false;
+	if (saved_power_on_reason == -1) {
+		unsigned int	power_on_reason = target_get_power_on_reason();
+
+		pr_track("power_on_reason = %d, is_warmboot = %d \n", power_on_reason, is_warmboot);
+		if ((power_on_reason == PWR_ON_EVENT_USB_CHG) && (is_warmboot == 0))
+			saved_power_on_reason = 1;
+		else
+			saved_power_on_reason = 0;
+	}
+
+	return (bool) saved_power_on_reason;
 }
+/* CORE-EL-FixPowerCycle-00*] */
 
 void write_pwron_cause (int pwron_cause);
 static ssize_t chg_is_enter_power_off_charging(struct device *dev,
@@ -5354,7 +5395,9 @@ static void brain(struct work_struct *work)
 		CHG_AUTO_ENABLE(chip, 0);
 		chgdone_irq_handler(chip->pmic_chg_irq[CHGDONE_IRQ], chip);
 
+#if 0 /* %%TBTA: this is buggy and will cause charging restart again */
 		set_rv(chip, true, __func__, __LINE__);
+#endif
 	
 		pr_err("ERROR!! Safety Timer expired\n");
 	}
@@ -5573,7 +5616,7 @@ static int __devinit pm8921_charger_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, chip);
 	the_chip = chip;
 
-	pm8921_usb_ovp_set_threshold(PM_USB_OV_5P5V);
+	pm8921_usb_ovp_set_threshold(PM_USB_OV_6P5V);
 
 	/* 
 	 *	read battery temperature to and store the init value for latter
@@ -5589,7 +5632,7 @@ static int __devinit pm8921_charger_probe(struct platform_device *pdev)
 	INIT_DELAYED_WORK(&chip->unplug_check_work, unplug_check_worker);
 
 	INIT_WORK(&chip->bms_notify.work, bms_notify);
-	INIT_WORK(&chip->battery_id_valid_work, battery_id_valid);
+	INIT_WORK(&chip->battery_present_work, battery_present);
 
 	INIT_DELAYED_WORK(&chip->update_heartbeat_work, update_heartbeat);
 

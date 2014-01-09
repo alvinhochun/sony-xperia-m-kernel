@@ -36,7 +36,7 @@
 	(((slv >= MSM_BUS_SLAVE_FIRST) && (slv <= MSM_BUS_SLAVE_LAST)) ? 1 : 0)
 
 #define INTERLEAVED_BW(fab_pdata, bw, ports) \
-	((fab_pdata->il_flag) ? DIV_ROUND_UP((bw), (ports)) : (bw))
+	((fab_pdata->il_flag) ? msm_bus_div64((ports), (bw)) : (bw))/*CORE-SC-system-stability-01*CR#472791*/
 #define INTERLEAVED_VAL(fab_pdata, n) \
 	((fab_pdata->il_flag) ? (n) : 1)
 
@@ -202,6 +202,7 @@ struct msm_bus_client {
 	int curr;
 };
 
+uint64_t msm_bus_div64(unsigned int width, uint64_t bw);/*CORE-SC-system-stability-01+*/
 int msm_bus_remote_hw_commit(struct msm_bus_fabric_registration
 	*fab_pdata, void *hw_data, void **cdata);
 int msm_bus_fabric_device_register(struct msm_bus_fabric_device *fabric);
